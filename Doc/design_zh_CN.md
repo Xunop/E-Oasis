@@ -140,12 +140,40 @@ CREATE TABLE identifiers (
 );
 ```
 
-以上表都是关于书籍信息，其中需要解释的点就是 sort 字段和 author_sort 字段，
-sort 存储需要
+以上表都是关于书籍信息，其中需要解释的点就是 sort 字段和 author_sort 字段，这些都是针对非中文书籍。
 
+sort 存储需要将前面的冠词换到后面：
+
+title_sort:
+
+```py
+    def update_title_sort(self, config, conn=None):
+        # user defined sort function for calibre databases (Series, etc.)
+        def _title_sort(title):
+            # calibre sort stuff
+            # ^(A|The|An|Der|Die|Das|Den|Ein|Eine|Einen|Dem|Des|Einem|Eines|Le|La|Les|L\'|Un|Une)\s+
+            title_pat = re.compile(config.config_title_regex, re.IGNORECASE)
+            match = title_pat.search(title)
+            if match:
+                prep = match.group(1)
+                title = title[len(prep):] + ', ' + prep
+            return title.strip()
+
+        try:
+            # sqlalchemy <1.4.24
+            conn = conn or self.session.connection().connection.driver_connection
+        except AttributeError:
+            # sqlalchemy >1.4.24 and sqlalchemy 2.0
+            conn = conn or self.session.connection().connection.connection
+        try:
+            conn.create_function("title_sort", 1, _title_sort)
+        except sqliteOperationalError:
+            pass
 ```
-sort_authors: Riccomini, Chris, input_authors: ['Chris Riccomini'], db_author: <Authors('Chris Riccomini,Riccomini, Chris')>, renamed_authors: []
-```
+
+> 'The Missing README' -> 'Missing README, The'
+
+author_sort 遵循以下代码，进行排序处理：
 
 author_sort:
 
@@ -176,6 +204,12 @@ def get_sorted_author(value):
         else:
             value2 = value
     return value2
+```
+
+> 'Chris Riccomini' -> 'Riccomini, Chris'
+
+```
+sort_authors: Riccomini, Chris, input_authors: ['Chris Riccomini'], db_author: <Authors('Chris Riccomini,Riccomini, Chris')>, renamed_authors: []
 ```
 
 ### 解析书籍信息
