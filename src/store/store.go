@@ -3,21 +3,17 @@ package store
 import (
 	"database/sql"
 	"sync"
-
-	"github.com/Xunop/e-oasis/config"
 )
 
 type Store struct {
-	config           *config.Config
 	db               *sql.DB
 	userCache        sync.Map // map[int]*User
 	userSettingCache sync.Map // map[string]*UserSetting
 }
 
-func NewStore(db *sql.DB, config *config.Config) *Store {
+func NewStore(db *sql.DB) *Store {
 	return &Store{
-		db:     db,
-		config: config,
+		db: db,
 	}
 }
 
@@ -26,7 +22,7 @@ func (s *Store) DBStats() sql.DBStats {
 }
 
 func (s *Store) Ping() error {
-    return s.db.Ping()
+	return s.db.Ping()
 }
 
 func (s *Store) Close() {

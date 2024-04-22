@@ -9,12 +9,12 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func NewDB(config *config.Config) (*sql.DB, error) {
-	if config.DsnURI == "" {
+func NewDB() (*sql.DB, error) {
+	if config.Opts.DSN == "" {
 		return nil, errors.New("Database URL is required")
 	}
 
-	db, err := sql.Open("sqlite", config.DsnURI)
+	db, err := sql.Open("sqlite", config.Opts.DSN)
 	if err != nil {
 		return nil, err
 	}

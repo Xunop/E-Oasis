@@ -1,47 +1,79 @@
 package config
 
-type Config struct {
-	// databaseURL is the URL of the database to connect to(sqlite)
-	DsnURI string
-	// port is the port to listen on
-	Port int
-	// host is the host to listen on
-	Host string
-	// data is the directory to store data
-	Data string
-	// version is the version of the application
-	Version string
-	// logFile is the file to write logs to
-	logFile string
-	// logLevel is the level of logging to show
-	logLevel string
-	// logFilemaxSize is the maximum size of the log file before it is rotated
-	logFileMaxSize int
-	// logFileMaxBackups is the maximum number of log files to keep
-	logFileMaxBackups int
-	// logFileMaxAge is the maximum number of days to keep a log file
-	logFileMaxAge int
-	// logCompress is whether or not to compress the log files
-	logCompress bool
-}
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
-func init() {
-	// init is called before main
+	"github.com/Xunop/e-oasis/version"
+	"github.com/pkg/errors"
+	"github.com/spf13/viper"
+)
 
-}
+var Opts *Options
 
-func NewConfig() *Config {
-	// return default configuration
-	return &Config{
-		logFile:           "e-oasis.log",
-		logLevel:          "info",
-		logFileMaxSize:    20,
-		logFileMaxBackups: 3,
-		logFileMaxAge:     30,
-		logCompress:       false,
-		DsnURI:            "sqlite://db.sqlite",
-		Port:              8080,
-		Data:              "/var/opt/e-oasis",
-		Version:		   "0.0.1",
+func GetConfig() (*Options, error) {
+	GetDefaultOptions()
+
+	dataDir, err := checkDataDir(Opts.Data)
+	if err != nil {
+		fmt.Println("Error checking data directory: ", err)
+		return nil, err
 	}
+
+	Opts.Data = dataDir
+	if Opts.DSN == "" {
+		dbFile := filepath.Join(Opts.Data, "e-oasis.db")
+		Opts.DSN = dbFile
+	}
+
+	Opts.Version = version.GetCurrentVersion()
+
+	return Opts, nil
+}
+
+func checkDataDir(dataDir string) (string, error) {
+	// Convert to absolute path if relative path is supplied.
+	if !filepath.IsAbs(dataDir) {
+		relativeDir := filepath.Join(filepath.Dir(os.Args[0]), dataDir)
+		absDir, err := filepath.Abs(relativeDir)
+		if err != nil {
+			return "", err
+		}
+		dataDir = absDir
+	}
+
+	// Trim trailing \ or / in case user supplies
+	dataDir = strings.TrimRight(dataDir, "\\/")
+	if _, err := os.Stat(dataDir); err != nil {
+		// Create dir
+		if dataDir == defaultData {
+			err := os.MkdirAll(dataDir, 0755)
+			if err != nil {
+				return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)
+			}
+		}
+		return "", errors.Wrapf(err, "unable to access data folder %s", dataDir)
+	}
+	return dataDir, nil
+}
+
+func ParseFile(file string) (*Options, error) {
+	// Check if file exists
+	if _, err := os.Stat(file); err != nil {
+		return nil, errors.Wrapf(err, "unable to access config file %s", file)
+	}
+
+	viper.SetConfigFile(file)
+	err := viper.ReadInConfig()
+	if err != nil {
+		return nil, err
+	}
+	Opts = &Options{}
+	err = viper.Unmarshal(Opts)
+	if err != nil {
+		return nil, err
+	}
+	return Opts, nil
 }

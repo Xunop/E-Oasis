@@ -2,7 +2,9 @@ package log
 
 import (
 	"os"
+	"strings"
 
+	"github.com/Xunop/e-oasis/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -11,6 +13,8 @@ import (
 var Logger *zap.Logger
 
 func init() {
+	// NOTE: Before using the logger, must call config.GetConfig() to initialize the configuration.
+	config.GetConfig()
 	Logger = newLogger()
 }
 
@@ -35,31 +39,38 @@ func Fatal(msg string, fields ...zap.Field) {
 }
 
 func newLogger() *zap.Logger {
-	// TODO: Read config
-	filename := "logs.log"
-
 	rotationLog := &lumberjack.Logger{
-		Filename:   filename,
-		MaxSize:    10, // megabytes
-		MaxBackups: 3,
-		MaxAge:     28, // days
-		Compress:   false,
+		Filename:   config.Opts.LogFile,
+		MaxSize:    config.Opts.LogFileMaxSize, // megabytes
+		MaxBackups: config.Opts.LogFileMaxBackups,
+		MaxAge:     config.Opts.LogFileMaxAge, // days
+		Compress:   config.Opts.LogCompress,
 	}
 
 	return newZap(rotationLog)
 }
 
 func newZap(rotationLog *lumberjack.Logger) *zap.Logger {
-	config := zap.NewProductionEncoderConfig()
-	config.EncodeTime = zapcore.ISO8601TimeEncoder
+	encodeConfig := zap.NewProductionEncoderConfig()
+	encodeConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	fileEncoder := zapcore.NewJSONEncoder(config)
-	consoleEncoder := zapcore.NewConsoleEncoder(config)
+	fileEncoder := zapcore.NewJSONEncoder(encodeConfig)
+	consoleEncoder := zapcore.NewConsoleEncoder(encodeConfig)
 
 	consoleWriter := zapcore.AddSync(os.Stdout)
 	rotationWrite := zapcore.AddSync(rotationLog)
 
-	defaultLogLevel := zapcore.InfoLevel
+	var defaultLogLevel zapcore.Level
+	switch strings.ToLower(config.Opts.LogLevel) {
+	case "debug":
+		defaultLogLevel = zapcore.DebugLevel
+	case "info":
+		defaultLogLevel = zapcore.InfoLevel
+	case "warn":
+		defaultLogLevel = zapcore.WarnLevel
+	case "error":
+		defaultLogLevel = zapcore.ErrorLevel
+	}
 
 	consoleCore := zapcore.NewCore(consoleEncoder, consoleWriter, defaultLogLevel)
 	rotationCore := zapcore.NewCore(fileEncoder, rotationWrite, defaultLogLevel)
