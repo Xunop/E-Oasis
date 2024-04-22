@@ -35,22 +35,25 @@ func Fatal(msg string, fields ...zap.Field) {
 }
 
 func newLogger() *zap.Logger {
-	return fileLogger("logs.log")
+	// TODO: Read config
+	filename := "logs.log"
+
+	rotationLog := &lumberjack.Logger{
+		Filename:   filename,
+		MaxSize:    10, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, // days
+	}
+
+	return newZap(rotationLog)
 }
 
-func fileLogger(filename string) *zap.Logger {
+func newZap(rotationLog *lumberjack.Logger) *zap.Logger {
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	fileEncoder := zapcore.NewJSONEncoder(config)
 	consoleEncoder := zapcore.NewConsoleEncoder(config)
-
-	rotationLog := &lumberjack.Logger{
-		Filename:   filename,
-		MaxSize:    1, // megabytes
-		MaxBackups: 3,
-		MaxAge:     28, // days
-	}
 
 	consoleWriter := zapcore.AddSync(os.Stdout)
 	rotationWrite := zapcore.AddSync(rotationLog)
