@@ -426,3 +426,38 @@ CREATE TABLE book_shelf_link (
 shelf 表中的 `display_order` 有 `mannual`, `modified_time`, `title`, `authors`, `publish_time`。`order_reverse` 字段表示是否逆序。
 
 book_shelf_link 表中的 `position` 表示当前这本书在 shelf 中的位置。用于手动排序。
+
+### system_setting
+
+系统设置，将配置存在 SQLite。
+
+```sql
+CREATE TABLE system_setting (
+    name TEXT NOT NULL,
+    value TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    UNIQUE(name)
+)
+```
+
+考虑应该把什么 setting 放置在这个表中。
+
+目前考虑跟日志相关的配置可以存放在这里，以及之后想要的扩展 (plugins) 的一些配置。
+
+将 `system_setting` 与服务相关的（不包括扩展）配置分为 `system_basic` 和 `system_general` 两种。
+
+`system_basic` 是配置一些配置比如日志等级和邮件服务设置等。设想如下：
+
+- 服务器配置：端口，可信主机
+- 日志配置：日志级别，日志文件路径
+
+`system_general` 主要配置功能方面：
+
+- 用户密码策略
+- 用户注册
+- 上传书籍功能，允许上传的书籍格式
+- 匿名浏览
+
+`system_plugin`:
+
+- 扩展功能 (plugins)，这里是指扩展功能的配置，而不是扩展的 token 等。
