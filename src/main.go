@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/database"
+	"github.com/Xunop/e-oasis/store/db"
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/server"
 	"github.com/Xunop/e-oasis/store"
@@ -46,19 +46,19 @@ var (
 			defer cancle()
 
 			// Will create a sqlite database
-			db, err := database.NewDB()
+			db, err := db.NewDB()
 			if err != nil {
 				cancle()
 				fmt.Println("Error connecting to database", err)
 				return
 			}
 			defer db.Close()
-			if err := database.Migrate(db, ctx); err != nil {
+			if err := db.Migrate(ctx); err != nil {
 				cancle()
-				fmt.Println("Error migrating database", err)
+				fmt.Println("Error migrating database,", err)
 			}
 
-			store := store.NewStore(db)
+			store := store.NewStore(db.DB)
 			if err := store.Ping(); err != nil {
 				cancle()
 				fmt.Println("Error pinging database", err)

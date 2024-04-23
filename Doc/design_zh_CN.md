@@ -377,16 +377,28 @@ CREATE TABLE user (
 
 #### 用户登录
 
-使用 session 控制用户登录信息：
+使用 access token 控制用户登录信息：
 
 ```sql
-CREATE TABLE user_session (
-	id INTEGER NOT NULL,
-	user_id INTEGER,
-	session_key VARCHAR,
-	PRIMARY KEY (id),
-	FOREIGN KEY(user_id) REFERENCES user (id)
-)
+CREATE TABLE user_setting (
+  user_id INTEGER NOT NULL,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  UNIQUE(user_id, key)
+);
+```
+
+其中一个 `key`，有关 access token 的内容将放在 `USER_SETTING_ACCESS_TOKENS`
+```go
+enum UserSettingKey {
+  USER_SETTING_KEY_UNSPECIFIED = 0;
+  // Access tokens for the user.
+  USER_SETTING_ACCESS_TOKENS = 1;
+  // The locale of the user.
+  USER_SETTING_LOCALE = 2;
+  // The appearance of the user.
+  USER_SETTING_APPEARANCE = 3;
+}
 ```
 
 ### 书架管理
@@ -402,7 +414,7 @@ CREATE TABLE shelf (
 	id INTEGER NOT NULL,
 	uuid VARCHAR,
 	name VARCHAR NOT NULL,
-	is_public SMALLINT DEFAULT 0,
+	visibility SMALLINT DEFAULT 0,
 	user_id INTEGER,
 	created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  	last_modified TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
