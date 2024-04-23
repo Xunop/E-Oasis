@@ -70,7 +70,6 @@ func ParseFile(file string) (*Options, error) {
 	if err != nil {
 		return nil, err
 	}
-	Opts = &Options{}
 	err = viper.Unmarshal(Opts)
 	if err != nil {
 		return nil, err

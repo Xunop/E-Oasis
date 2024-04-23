@@ -8,12 +8,11 @@ import (
 
 	"github.com/Xunop/e-oasis/api"
 	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/log"
+
 	"github.com/Xunop/e-oasis/store"
 	"github.com/Xunop/e-oasis/version"
 	"github.com/Xunop/e-oasis/worker"
 	"github.com/gorilla/mux"
-	"go.uber.org/zap"
 )
 
 func StartServer(ctx context.Context, store *store.Store, pool *worker.Pool) (*http.Server, error) {
@@ -31,9 +30,9 @@ func StartServer(ctx context.Context, store *store.Store, pool *worker.Pool) (*h
 
 func startHTTPServer(server *http.Server) {
 	go func() {
-		log.Info("Starting HTTP server", zap.String("address", server.Addr))
+		fmt.Println("Starting HTTP server in:", server.Addr)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Error("HTTP server error", zap.Error(err))
+			fmt.Println("HTTP server error", err)
 			os.Exit(1)
 		}
 	}()

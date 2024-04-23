@@ -38,18 +38,18 @@ func TestLoadConfigFile(t *testing.T) {
 		LogFile: %s
 		`, opts.Version, opts.Host, opts.Port, opts.DSN, opts.LogLevel, opts.LogFile)
     if opts.Version != "1.0.0" {
-		t.Errorf("Version not set")
+		t.Errorf("version not set")
 	}
 	if opts.Host != "127.0.0.1" {
-		t.Errorf("Host not set")
+		t.Errorf("host not set")
 	}
 	if opts.LogFile != "test.log" {
-		t.Errorf("LogFile not set")
+		t.Errorf("log_file not set")
 	}
 	if opts.Port != 2333 {
-		t.Errorf("Port not set")
+		t.Errorf("port not set")
 	}
 	if opts.LogLevel != "DEBUG" {
-		t.Errorf("LogLevel not set")
+		t.Errorf("log_level not set")
 	}
 }

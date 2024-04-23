@@ -12,11 +12,8 @@ import (
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/server"
 	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/version"
 	"github.com/Xunop/e-oasis/worker"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 const (
@@ -30,11 +27,13 @@ const (
 )
 
 var (
-	dsn     string
-	host    string
-	port    string
-	data    string
-	cfgFile string
+	dsn        string
+	host       string
+	port       int
+	data       string
+	cfgFile    string
+	debug      bool
+	configDump bool
 
 	rootCmd = &cobra.Command{
 		Use:   "e-oasis",
@@ -49,19 +48,19 @@ var (
 			db, err := database.NewDB()
 			if err != nil {
 				cancle()
-				log.Error("Error connecting to database", zap.Error(err))
+				fmt.Println("Error connecting to database", err)
 				return
 			}
 			defer db.Close()
 			if err := database.Migrate(db, ctx); err != nil {
 				cancle()
-				log.Error("Error migrating database", zap.Error(err))
+				fmt.Println("Error migrating database", err)
 			}
 
 			store := store.NewStore(db)
 			if err := store.Ping(); err != nil {
 				cancle()
-				log.Error("Error pinging database", zap.Error(err))
+				fmt.Println("Error pinging database", err)
 				return
 			}
 
@@ -70,7 +69,7 @@ var (
 			s, err := server.StartServer(ctx, store, pool)
 			if err != nil {
 				cancle()
-				log.Error("Error creating server", zap.Error(err))
+				fmt.Println("Error creating server", err)
 				return
 			}
 
@@ -80,8 +79,9 @@ var (
 
 			go func() {
 				<-c
-				log.Debug("Received interrupt signal", zap.String("signal", "SIGINT"))
+				fmt.Println("Received interrupt signal")
 				s.Shutdown(ctx)
+				log.Logger.Sync()
 				cancle()
 			}()
 
@@ -100,68 +100,61 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	config.GetConfig()
+
 	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "Database connection string")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "", "localhost", "Server host")
-	rootCmd.PersistentFlags().StringVarP(&port, "port", "p", "8080", "Server port")
+	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 8080, "Server port")
 	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "data", "Data directory")
-	rootCmd.PersistentFlags().BoolP("debug", "", false, "Debug mode")
-
-	rootCmd.PersistentFlags().BoolP("version", "v", false, "Print version")
-	rootCmd.PersistentFlags().BoolP("config-dump", "", false, "Dump config file")
-	//TODO: Add help flag and dump config file
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Help")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Debug mode")
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "Config file")
 
-	err := viper.BindPFlag("dsn", rootCmd.PersistentFlags().Lookup("dsn"))
-	if err != nil {
-		log.Error("Error binding dsn flag", zap.Error(err))
-		panic(err)
-	}
+	//TODO: Add help flag and dump config file
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "Help")
+	rootCmd.PersistentFlags().BoolVarP(&configDump, "config-dump", "", false, "Dump config file")
 
-	err = viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host"))
-	if err != nil {
-		log.Error("Error binding host flag", zap.Error(err))
-		panic(err)
-	}
-
-	err = viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
-	if err != nil {
-		log.Error("Error binding port flag", zap.Error(err))
-		panic(err)
-	}
-
-	err = viper.BindPFlag("data", rootCmd.PersistentFlags().Lookup("data"))
-	if err != nil {
-		log.Error("Error binding data flag", zap.Error(err))
-		panic(err)
-	}
-
-	if rootCmd.PersistentFlags().Lookup("version").Changed {
-		fmt.Println(version.GetCurrentVersion())
-	}
-
-	if rootCmd.PersistentFlags().Lookup("debug").Changed {
-		config.Opts.LogLevel = "debug"
-	}
-
-	if rootCmd.PersistentFlags().Lookup("config").Value.String() != "" {
-		config.Opts, err = config.ParseFile(rootCmd.PersistentFlags().Lookup("config").Value.String())
-		if err != nil {
-			log.Error("Error parsing config file", zap.Error(err))
-			panic(err)
-		}
-	}
-	viper.SetEnvPrefix("eoasis")
+	// viper.SetEnvPrefix("eoasis")
 }
 
+// initConfig will run befroe the command is exeuted
+// init() -> Getconfig() -> initConfig()
 func initConfig() {
-	viper.AutomaticEnv()
-	config := config.Opts
+	fmt.Println("Initializing config")
+	// viper.AutomaticEnv()
 
+	var err error
 	if cfgFile != "" {
-
+		config.Opts, err = config.ParseFile(cfgFile)
+		if err != nil {
+			fmt.Println("Error parsing config file", err)
+			panic(err)
+		}
+	} else {
+		if dsn != "" {
+			config.Opts.DSN = dsn
+		}
+		if host != "" {
+			config.Opts.Host = host
+		}
+		if port != 0 {
+			config.Opts.Port = port
+		}
+		if data != "" {
+			config.Opts.Data = data
+		}
+		if debug {
+			fmt.Println("Debug mode enabled")
+			config.Opts.LogLevel = "debug"
+		}
+		if configDump {
+			// TODO: config impl stringer
+		}
 	}
 
+	// Initialize logger
+	log.Logger = log.NewLogger()
+
+	config := config.Opts
 	fmt.Printf(`---
 		Server config
 		version: %s
@@ -175,9 +168,6 @@ func initConfig() {
 }
 
 func main() {
-	//StartServer()
-	log.Info("Server started")
-	defer log.Logger.Sync()
 	if err := Execute(); err != nil {
 		panic(err)
 	}

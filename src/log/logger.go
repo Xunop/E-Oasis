@@ -12,12 +12,6 @@ import (
 
 var Logger *zap.Logger
 
-func init() {
-	// NOTE: Before using the logger, must call config.GetConfig() to initialize the configuration.
-	config.GetConfig()
-	Logger = newLogger()
-}
-
 func Info(msg string, fields ...zap.Field) {
 	Logger.Info(msg, fields...)
 }
@@ -38,7 +32,7 @@ func Fatal(msg string, fields ...zap.Field) {
 	Logger.Fatal(msg, fields...)
 }
 
-func newLogger() *zap.Logger {
+func NewLogger() *zap.Logger {
 	rotationLog := &lumberjack.Logger{
 		Filename:   config.Opts.LogFile,
 		MaxSize:    config.Opts.LogFileMaxSize, // megabytes
