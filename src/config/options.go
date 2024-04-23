@@ -9,7 +9,7 @@ const (
 	defaultLogCompress            = false
 	defaultDSN                    = "./e-oasis.db"
 	defaultPort                   = 8080
-	defaultHost                   = ""
+	defaultHost                   = "0.0.0.0"
 	defaultData                   = "/var/opt/e-oasis"
 	defaultVersion                = "0.0.1"
 	defaultMetricsCollector       = false
@@ -17,6 +17,7 @@ const (
 	defaultMetricsAllowedNetworks = "127.0.0.1/8"
 	defaultMetricsUsername        = ""
 	defaultMetricsPassword        = ""
+	defaultWorkerPoolSize         = 10
 )
 
 type Option struct {
@@ -46,7 +47,8 @@ type Options struct {
 	// host is the host to listen on
 	Host string `mapstructure:"host"`
 	// data is the directory to store data
-	Data string `mapstructure:"data"`
+	Data           string `mapstructure:"data"`
+	WorkerPoolSize int    `mapstructure:"worker_pool_size"`
 	// version is the version of the application
 	Version string `mapstructure:"version"`
 	// For metrics
@@ -69,6 +71,7 @@ func GetDefaultOptions() *Options {
 		Port:                   defaultPort,
 		Host:                   defaultHost,
 		Data:                   defaultData,
+		WorkerPoolSize:         defaultWorkerPoolSize,
 		Version:                defaultVersion,
 		MetricsCollector:       defaultMetricsCollector,
 		MetricsRefreshInterval: defaultMetricsRefreshInterval,

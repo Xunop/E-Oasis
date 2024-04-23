@@ -22,6 +22,7 @@ func NewDB() (*sql.DB, error) {
 	return db, nil
 }
 
+// TODO:
 func Migrate(db *sql.DB, ctx context.Context) error {
 	return nil
 }

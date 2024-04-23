@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/database"
@@ -10,6 +13,7 @@ import (
 	"github.com/Xunop/e-oasis/server"
 	"github.com/Xunop/e-oasis/store"
 	"github.com/Xunop/e-oasis/version"
+	"github.com/Xunop/e-oasis/worker"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -26,15 +30,19 @@ const (
 )
 
 var (
-	dsn  string
-	host string
-	port string
-	data string
+	dsn     string
+	host    string
+	port    string
+	data    string
+	cfgFile string
 
 	rootCmd = &cobra.Command{
 		Use:   "e-oasis",
 		Short: "E-Oasis is a e-book management system",
 		Run: func(cmd *cobra.Command, args []string) {
+			c := make(chan os.Signal, 1)
+			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 			ctx, cancle := context.WithCancel(context.Background())
 			defer cancle()
 
@@ -57,20 +65,37 @@ var (
 				return
 			}
 
-			s, err := server.NewServer(ctx, store)
+			pool := worker.NewPool(store, config.Opts.WorkerPoolSize)
+
+			s, err := server.StartServer(ctx, store, pool)
 			if err != nil {
 				cancle()
 				log.Error("Error creating server", zap.Error(err))
 				return
 			}
-			if s == nil {
 
+			if config.Opts.MetricsCollector {
+				// TODO: Add metrics
 			}
-			// s.Start()
 
+			go func() {
+				<-c
+				log.Debug("Received interrupt signal", zap.String("signal", "SIGINT"))
+				s.Shutdown(ctx)
+				cancle()
+			}()
+
+			printGreetings()
+
+			// Waitting for signal
+			<-ctx.Done()
 		},
 	}
 )
+
+func Execute() error {
+	return rootCmd.Execute()
+}
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -85,7 +110,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("config-dump", "", false, "Dump config file")
 	//TODO: Add help flag and dump config file
 	rootCmd.PersistentFlags().BoolP("help", "h", false, "Help")
-	rootCmd.PersistentFlags().StringP("config", "c", "", "Config file")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "Config file")
 
 	err := viper.BindPFlag("dsn", rootCmd.PersistentFlags().Lookup("dsn"))
 	if err != nil {
@@ -126,11 +151,16 @@ func init() {
 			panic(err)
 		}
 	}
+	viper.SetEnvPrefix("eoasis")
 }
 
 func initConfig() {
 	viper.AutomaticEnv()
 	config := config.Opts
+
+	if cfgFile != "" {
+
+	}
 
 	fmt.Printf(`---
 		Server config
@@ -138,9 +168,9 @@ func initConfig() {
 		host: %s
 		port: %d
 		db: %s
-        log_level: %s
-        data: %s
-        ---
+ 		log_level: %s
+ 		data: %s
+---
 	`, config.Version, config.Host, config.Port, config.DSN, config.LogLevel, config.Data)
 }
 
@@ -148,4 +178,11 @@ func main() {
 	//StartServer()
 	log.Info("Server started")
 	defer log.Logger.Sync()
+	if err := Execute(); err != nil {
+		panic(err)
+	}
+}
+
+func printGreetings() {
+	print(greetingBanner)
 }
