@@ -45,6 +45,7 @@ var (
 			ctx, cancle := context.WithCancel(context.Background())
 			defer cancle()
 
+			// Will create a sqlite database
 			db, err := database.NewDB()
 			if err != nil {
 				cancle()
@@ -157,14 +158,13 @@ func initConfig() {
 	config := config.Opts
 	fmt.Printf(`---
 		Server config
-		version: %s
 		host: %s
 		port: %d
 		db: %s
  		log_level: %s
  		data: %s
 ---
-	`, config.Version, config.Host, config.Port, config.DSN, config.LogLevel, config.Data)
+	`, config.Host, config.Port, config.DSN, config.LogLevel, config.Data)
 }
 
 func main() {

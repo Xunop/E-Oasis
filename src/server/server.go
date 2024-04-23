@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Xunop/e-oasis/api"
+	"github.com/Xunop/e-oasis/api/v1"
 	"github.com/Xunop/e-oasis/config"
 
 	"github.com/Xunop/e-oasis/store"
@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// StartServer starts the HTTP server
 func StartServer(ctx context.Context, store *store.Store, pool *worker.Pool) (*http.Server, error) {
 	addr := config.Opts.Host
 	port := config.Opts.Port
@@ -43,7 +44,8 @@ func setupHandler(store *store.Store, pool *worker.Pool) http.Handler {
 
 	router.Use(middleware)
 
-	api.Server(router, store, pool)
+	// TODO: Add other routes
+	v1.Server(router, store, pool)
 
 	router.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		if err := store.Ping(); err != nil {

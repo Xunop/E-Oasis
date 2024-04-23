@@ -11,7 +11,6 @@ const (
 	defaultPort                   = 8080
 	defaultHost                   = "0.0.0.0"
 	defaultData                   = "/var/opt/e-oasis"
-	defaultVersion                = "0.0.1"
 	defaultMetricsCollector       = false
 	defaultMetricsRefreshInterval = 15
 	defaultMetricsAllowedNetworks = "127.0.0.1/8"
@@ -49,8 +48,6 @@ type Options struct {
 	// data is the directory to store data
 	Data           string `mapstructure:"data"`
 	WorkerPoolSize int    `mapstructure:"worker_pool_size"`
-	// version is the version of the application
-	Version string `mapstructure:"version"`
 	// For metrics
 	MetricsCollector       bool     `mapstructure:"metrics_collector"`
 	MetricsRefreshInterval int      `mapstructure:"metrics_refresh_interval"`
@@ -72,7 +69,6 @@ func GetDefaultOptions() *Options {
 		Host:                   defaultHost,
 		Data:                   defaultData,
 		WorkerPoolSize:         defaultWorkerPoolSize,
-		Version:                defaultVersion,
 		MetricsCollector:       defaultMetricsCollector,
 		MetricsRefreshInterval: defaultMetricsRefreshInterval,
 		MetricsAllowedNetworks: []string{defaultMetricsAllowedNetworks},

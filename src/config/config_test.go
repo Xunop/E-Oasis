@@ -11,16 +11,15 @@ func TestLoadDefaultConfig(t *testing.T) {
     }
 
 	t.Logf(`Config
-		Version: %s
 		Host: %s
 		Port: %d
 		DSN: %s
 		LogLevel: %s
 		Data: %s
-		`, opts.Version, opts.Host, opts.Port, opts.DSN, opts.LogLevel, opts.Data)
+		`, opts.Host, opts.Port, opts.DSN, opts.LogLevel, opts.Data)
 
-	if opts.Version != defaultVersion {
-		t.Errorf("Version not set")
+	if opts.Data != "/var/opt/e-oasis" {
+		t.Errorf("data not set")
 	}
 }
 
@@ -30,26 +29,22 @@ func TestLoadConfigFile(t *testing.T) {
         t.Errorf("Error loading config: %s", err)
     }
 	t.Logf(`Config
-		Version: %s
 		Host: %s
 		Port: %d
 		DSN: %s
 		LogLevel: %s
 		LogFile: %s
-		`, opts.Version, opts.Host, opts.Port, opts.DSN, opts.LogLevel, opts.LogFile)
-    if opts.Version != "1.0.0" {
-		t.Errorf("version not set")
-	}
+		`, opts.Host, opts.Port, opts.DSN, opts.LogLevel, opts.LogFile)
 	if opts.Host != "127.0.0.1" {
-		t.Errorf("host not set")
+		t.Errorf("host incorrect")
 	}
 	if opts.LogFile != "test.log" {
-		t.Errorf("log_file not set")
+		t.Errorf("log_file incorrect")
 	}
 	if opts.Port != 2333 {
-		t.Errorf("port not set")
+		t.Errorf("port incorrect")
 	}
-	if opts.LogLevel != "DEBUG" {
-		t.Errorf("log_level not set")
+	if opts.LogLevel != "debug" {
+		t.Errorf("log_level incorrect")
 	}
 }

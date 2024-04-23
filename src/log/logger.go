@@ -55,6 +55,10 @@ func newZap(rotationLog *lumberjack.Logger) *zap.Logger {
 	rotationWrite := zapcore.AddSync(rotationLog)
 
 	var defaultLogLevel zapcore.Level
+	if config.Opts == nil {
+		config.GetConfig()
+	}
+
 	switch strings.ToLower(config.Opts.LogLevel) {
 	case "debug":
 		defaultLogLevel = zapcore.DebugLevel
@@ -64,6 +68,8 @@ func newZap(rotationLog *lumberjack.Logger) *zap.Logger {
 		defaultLogLevel = zapcore.WarnLevel
 	case "error":
 		defaultLogLevel = zapcore.ErrorLevel
+	default:
+		defaultLogLevel = zapcore.InfoLevel
 	}
 
 	consoleCore := zapcore.NewCore(consoleEncoder, consoleWriter, defaultLogLevel)

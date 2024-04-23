@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Xunop/e-oasis/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -27,8 +26,6 @@ func GetConfig() (*Options, error) {
 		dbFile := filepath.Join(Opts.Data, "e-oasis.db")
 		Opts.DSN = dbFile
 	}
-
-	Opts.Version = version.GetCurrentVersion()
 
 	return Opts, nil
 }
