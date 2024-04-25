@@ -17,6 +17,7 @@ CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
+  last_login_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
   username TEXT NOT NULL UNIQUE,
   row_status TEXT NOT NULL CHECK (row_status IN ('NORMAL', 'ARCHIVED')) DEFAULT 'NORMAL',
   role TEXT NOT NULL CHECK (role IN ('HOST', 'ADMIN', 'USER')) DEFAULT 'USER',

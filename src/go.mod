@@ -3,6 +3,7 @@ module github.com/Xunop/e-oasis
 go 1.22.2
 
 require (
+	github.com/andybalholm/brotli v1.1.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/mux v1.8.1
 	github.com/pkg/errors v0.9.1

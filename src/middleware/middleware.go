@@ -1,13 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
-	"strings"
+	"time"
 
-	"github.com/Xunop/e-oasis/api/auth"
+	"github.com/Xunop/e-oasis/store"
+
 	"github.com/Xunop/e-oasis/http/request"
 	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/store"
 	"go.uber.org/zap"
 )
 
@@ -19,6 +20,7 @@ func NewMiddleware(store *store.Store) *Middleware {
 	return &Middleware{store: store}
 }
 
+// HandleCORS handles the CORS request
 func (m *Middleware) HandleCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -33,39 +35,23 @@ func (m *Middleware) HandleCORS(next http.Handler) http.Handler {
 	})
 }
 
-func (m *Middleware) AuthenticationInterceptor(next http.Handler) http.Handler {
+// LoggingRequest logs the incomming request
+func (m *Middleware) LoggingRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientIP := request.ClientIP(r)
-		accesstoken := getAccessToken(r)
+		clientIP := request.FindClientIP(r)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, request.ClientIPContextKey, clientIP)
 
-		if accesstoken == "" {
-			log.Debug("[API] Skipping authentication because no access token provided",
+		t1 := time.Now()
+		defer func() {
+			log.Debug("Incomming request",
+				zap.String("method", r.Method),
+				zap.String("path", r.URL.Path),
+				zap.String("proto", r.Proto),
 				zap.String("client_ip", clientIP),
-				zap.String("user_agent", r.UserAgent()),
-			)
-			// json.Unauthorized(w, "No access token provided")
-		}
+				zap.Duration("duration", time.Since(t1)))
+		}()
 
+		next.ServeHTTP(w, r)
 	})
-}
-
-func getAccessToken(r *http.Request) string {
-	// Check the HTTP Authorization header first
-	authorizationHeaders := r.Header.Get("Authorization")
-	// Check bearer token
-	if authorizationHeaders != "" {
-		splitToken := strings.Split(authorizationHeaders, "Bearer ")
-		if len(splitToken) == 2 {
-			return splitToken[1]
-		}
-	}
-
-	// Check the cookie header
-	var accessToken string
-	for cookie := range r.Cookies() {
-		if r.Cookies()[cookie].Name == auth.AccessTokenCookieName {
-			accessToken = r.Cookies()[cookie].Value
-		}
-	}
-	return accessToken
 }

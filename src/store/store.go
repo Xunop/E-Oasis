@@ -6,9 +6,10 @@ import (
 )
 
 type Store struct {
-	db               *sql.DB
-	userCache        sync.Map // map[int]*User
-	userSettingCache sync.Map // map[string]*UserSetting
+	db                 *sql.DB
+	userCache          sync.Map // map[int]*User
+	userSettingCache   sync.Map // map[string]*UserSetting
+	systemSettingCache sync.Map // map[string]*SystemSetting
 }
 
 func NewStore(db *sql.DB) *Store {

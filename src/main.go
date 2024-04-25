@@ -26,6 +26,7 @@ const (
 `
 )
 
+// Because the log need to be initialized before the command is executed, so can't use log package here
 var (
 	dsn        string
 	host       string
@@ -67,6 +68,7 @@ var (
 
 			pool := worker.NewPool(store, config.Opts.WorkerPoolSize)
 
+			// Start Server
 			s, err := server.StartServer(ctx, store, pool)
 			if err != nil {
 				cancle()

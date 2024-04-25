@@ -1,4 +1,4 @@
-package request
+package request //import "github.com/Xunop/e-oasis/http/request"
 
 import "net/http"
 
@@ -6,6 +6,10 @@ type ContextKey int
 
 const (
 	ClientIPContextKey ContextKey = iota
+    UserIDContextKey
+    UserNameContextKey
+    IsAdminUserContextKey
+	IsAuthenticatedContextKey
 )
 
 func getContextStringValue(r *http.Request, key ContextKey) string {

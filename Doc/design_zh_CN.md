@@ -363,12 +363,17 @@ CREATE TABLE duration_info (
 
 ```sql
 CREATE TABLE user (
-	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-	name VARCHAR(64),
-	email VARCHAR(120),
-	role SMALLINT,
-	password VARCHAR,
-	view_settings JSON,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
+  username TEXT NOT NULL UNIQUE,
+  row_status TEXT NOT NULL CHECK (row_status IN ('NORMAL', 'ARCHIVED')) DEFAULT 'NORMAL',
+  role TEXT NOT NULL CHECK (role IN ('HOST', 'ADMIN', 'USER')) DEFAULT 'USER',
+  email TEXT NOT NULL DEFAULT '',
+  nickname TEXT NOT NULL DEFAULT '',
+  password_hash TEXT NOT NULL,
+  avatar_url TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT ''
 )
 ```
 
@@ -456,11 +461,10 @@ CREATE TABLE system_setting (
 
 目前考虑跟日志相关的配置可以存放在这里，以及之后想要的扩展 (plugins) 的一些配置。
 
-将 `system_setting` 与服务相关的（不包括扩展）配置分为 `system_basic` 和 `system_general` 两种。
+将 `system_setting` 与服务相关的（不包括扩展）配置分为 `system_basic`, `system_general`, `system_plugin`, `system_security`
 
 `system_basic` 是配置一些配置比如日志等级和邮件服务设置等。设想如下：
 
-- 服务器配置：端口，可信主机
 - 日志配置：日志级别，日志文件路径
 
 `system_general` 主要配置功能方面：
@@ -473,3 +477,7 @@ CREATE TABLE system_setting (
 `system_plugin`:
 
 - 扩展功能 (plugins)，这里是指扩展功能的配置，而不是扩展的 token 等。
+
+`system_security`:
+
+- JWTSecret
