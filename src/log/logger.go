@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -30,6 +31,14 @@ func Warn(msg string, fields ...zap.Field) {
 
 func Fatal(msg string, fields ...zap.Field) {
 	Logger.Fatal(msg, fields...)
+}
+
+func Fallback(level string, msg string) {
+	if level == "Error" {
+	    fmt.Fprint(os.Stderr, msg)
+	} else {
+        fmt.Fprint(os.Stdin, msg)
+	}
 }
 
 func NewLogger() *zap.Logger {

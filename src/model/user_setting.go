@@ -14,6 +14,9 @@ const (
 	UserSettingKey_USER_SETTING_APPEARANCE UserSettingKey = 3
 	// The visibility of the memo.
 	UserSettingKey_USER_SETTING_MEMO_VISIBILITY UserSettingKey = 4
+
+	// Default view settings.
+	DefaultViewSettings       = `{"show_hot_book":true}`
 )
 
 // Enum value maps for UserSettingKey.
@@ -43,6 +46,10 @@ type UserSetting struct {
 type FindUserSetting struct {
 	UserID *int32
 	Key    UserSettingKey
+}
+
+type ViewSetting struct {
+	ShowHotBook bool `json:"show_hot_book"`
 }
 
 type AccessTokensUserSetting_AccessToken struct {
@@ -81,7 +88,7 @@ func (x *UserSetting) GetAccessTokens() *AccessTokensUserSetting {
 	if x != nil {
 	    err := json.Unmarshal([]byte(x.Value), &accessTokens)
 	    if err != nil {
-	    	return nil
+            return nil
 	    }
 	    return &accessTokens
 	}

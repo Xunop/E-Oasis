@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Store) GetSystemSetting(name string) (*model.SystemSetting, error) {
-	if cache, ok := s.systemSettingCache.Load(name); ok {
+	if cache, ok := s.SystemSettingCache.Load(name); ok {
 		return cache.(*model.SystemSetting), nil
 	}
 
@@ -42,19 +42,32 @@ func (s *Store) GetSystemBasicSetting() (*model.SystemSettingBasic, error) {
 	return basicSetting, nil
 }
 
-func (s *Store) GetSystemSecuritySetting() (*model.SystemSettingSecurity, error) {
-	systemSetting, err := s.GetSystemSetting(model.SettingTypeSecurity)
+func (s *Store) GetSystemGeneralSetting() (*model.SystemSettingGeneral, error) {
+	systemSetting, err := s.GetSystemSetting(model.SettingTypeGeneral)
 	if err != nil {
 		return nil, err
 	}
-	// var securitySetting model.SystemSettingSecurity
-	securitySetting := &model.SystemSettingSecurity{}
-	err = json.Unmarshal([]byte(systemSetting.Value), securitySetting)
+	generalSetting := &model.SystemSettingGeneral{}
+	err = json.Unmarshal([]byte(systemSetting.Value), generalSetting)
 	if err != nil {
 		return nil, err
 	}
-	return securitySetting, nil
+	return generalSetting, nil
 }
+
+// func (s *Store) GetSystemSecuritySetting() (*model.SystemSettingSecurity, error) {
+// 	systemSetting, err := s.GetSystemSetting(model.SettingTypeSecurity)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	// var securitySetting model.SystemSettingSecurity
+// 	securitySetting := &model.SystemSettingSecurity{}
+// 	err = json.Unmarshal([]byte(systemSetting.Value), securitySetting)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return securitySetting, nil
+// }
 
 func (s *Store) UpsetSystemSetting(setting *model.SystemSetting) (*model.SystemSetting, error) {
 	newSetting := &model.SystemSetting{
@@ -101,7 +114,7 @@ func (s *Store) UpsetSystemSetting(setting *model.SystemSetting) (*model.SystemS
 		value, err = json.Marshal(custom)
 	default:
 		log.Debug("Unsupported workspace setting key", zap.String("setting", setting.Name))
-		return nil, errors.Errorf("unsupported workspace setting key: %v", setting.Name)
+		return nil, errors.Errorf("Unsupported workspace setting key: %v", setting.Name)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to marshal/unmarshal setting value")
@@ -114,7 +127,7 @@ func (s *Store) UpsetSystemSetting(setting *model.SystemSetting) (*model.SystemS
 		name, value, description
 	)
 	VALUES (?, ?, ?)
-	ON CONFLICT(name) DO UPDATE 
+	ON CONFLICT(name) DO UPDATE
 	SET
 		value = EXCLUDED.value,
 		description = EXCLUDED.description
@@ -122,7 +135,7 @@ func (s *Store) UpsetSystemSetting(setting *model.SystemSetting) (*model.SystemS
 	if _, err := s.db.Exec(stmt, newSetting.Name, newSetting.Value, newSetting.Description); err != nil {
 		return nil, err
 	}
-	s.systemSettingCache.Store(newSetting.Name, newSetting)
+	s.SystemSettingCache.Store(newSetting.Name, newSetting)
 	return newSetting, nil
 }
 

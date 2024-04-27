@@ -9,9 +9,26 @@ import (
 	"go.uber.org/zap"
 )
 
+func (s *Store) SetUserSetting(userSetting *model.UserSetting) error {
+	query := `
+		INSERT INTO user_setting (user_id, key, value)
+		VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE value = ?
+	`
+
+	log.Debug("SetUserSetting", zap.String("query", query), zap.Any("args", userSetting))
+
+	_, err := s.db.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value, userSetting.Value)
+	if err != nil {
+		return err
+	}
+	s.UserSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key.String()), userSetting)
+	return nil
+}
+
 func (s *Store) GetUserSetting(find *model.FindUserSetting) (*model.UserSetting, error) {
 	if find.UserID != nil {
-		if cache, ok := s.userSettingCache.Load(getUserSettingCacheKey(*find.UserID, find.Key.String())); ok {
+		if cache, ok := s.UserSettingCache.Load(getUserSettingCacheKey(*find.UserID, find.Key.String())); ok {
 			return cache.(*model.UserSetting), nil
 		}
 	}
@@ -24,11 +41,11 @@ func (s *Store) GetUserSetting(find *model.FindUserSetting) (*model.UserSetting,
 		return nil, nil
 	}
 	if len(list) > 1 {
-		return nil, errors.Errorf("expected 1 user setting, but got %d", len(list))
+		return nil, errors.Errorf("Expected 1 user setting, but got %d", len(list))
 	}
 
 	userSetting := list[0]
-	s.userSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key.String()), userSetting)
+	s.UserSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key.String()), userSetting)
 	return userSetting, nil
 }
 
@@ -76,7 +93,7 @@ func (s *Store) ListUserSettings(find *model.FindUserSetting) ([]*model.UserSett
 		return nil, err
 	}
 	for _, userSetting := range userSettingList {
-		s.userSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key.String()), userSetting)
+		s.UserSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key.String()), userSetting)
 	}
 
 	return userSettingList, nil

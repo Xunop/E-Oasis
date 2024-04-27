@@ -17,7 +17,7 @@ func (s *Store) GetUser(find *model.FindUser) (*model.User, error) {
 			return model.SystemBot, nil
 		}
 
-		if cache, ok := s.userCache.Load(*find.ID); ok {
+		if cache, ok := s.UserCache.Load(*find.ID); ok {
 			return cache.(*model.User), nil
 		}
 	}
@@ -31,7 +31,7 @@ func (s *Store) GetUser(find *model.FindUser) (*model.User, error) {
 	}
 
 	user := list[0]
-	s.userCache.Store(user.ID, user)
+	s.UserCache.Store(user.ID, user)
 	return user, nil
 }
 
@@ -54,13 +54,14 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 		where, args = append(where, "nickname = ?"), append(args, *v)
 	}
 
+	// Get only active users
 	orderBy := []string{"created_ts DESC", "row_status DESC"}
 	if find.Random {
 		orderBy = slices.Concat([]string{"RANDOM()"}, orderBy)
 	}
 
 	query := `
-		SELECT 
+		SELECT
 			id,
 			username,
 			role,
@@ -72,24 +73,33 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 			created_ts,
 			updated_ts,
             last_login_ts,
-			row_status
+			row_status,
+	        recive_book_email
 		FROM user
 		WHERE ` + strings.Join(where, " AND ") + ` ORDER BY ` + strings.Join(orderBy, ", ")
 	if v := find.Limit; v != nil {
 		query += fmt.Sprintf(" LIMIT %d", *v)
 	}
 
-	log.Debug("ListUsers", zap.String("query", query), zap.Any("args", args))
+	// zap not support escape character, so need to fallback.
+	// https://github.com/uber-go/zap/issues/963
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", query, args))
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
+		log.Debug("Error querying users", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
 	list := make([]*model.User, 0)
 	for rows.Next() {
+        columns, _ := rows.Columns()
+        fmt.Println(columns)
+        // [id username role email nickname password_hash avatar_url description created_ts updated_ts last_login_ts row_status]
 		var user model.User
+		// The ordering of query results should be consistent with query var
 		if err := rows.Scan(
 			&user.ID,
 			&user.Username,
@@ -103,6 +113,7 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 			&user.UpdatedTs,
 			&user.LastLoginTs,
 			&user.RowStatus,
+			&user.ReciveBookEmail,
 		); err != nil {
 			return nil, err
 		}
@@ -123,4 +134,44 @@ func (s *Store) SetLastLogin(userID int32) error {
 		errors.Wrap(err, "store: unable to update last login date")
 	}
 	return nil
+}
+
+func (s *Store) CreateUser(create *model.User) (*model.User, error) {
+	fields := []string{"`username`", "`role`", "`email`", "`recive_book_email`", "`nickname`", "`password_hash`", "`avatar_url`", "`description`"}
+	placeholder := []string{"?", "?", "?", "?", "?", "?", "?", "?"}
+	args := []any{create.Username, create.Role, create.Email, create.ReciveBookEmail, create.Nickname, create.PasswordHash, create.AvatarURL, create.Description}
+	stmt := "INSERT INTO user (" + strings.Join(fields, ", ") + ") VALUES (" + strings.Join(placeholder, ", ") + ") RETURNING id, row_status, created_ts, updated_ts, last_login_ts, username, role, email, recive_book_email, nickname, avatar_url, description"
+
+	// log.Debug("CreateUser", zap.String("stmt", stmt), zap.Any("args", args))
+	log.Fallback("Debug", fmt.Sprintf("CreateUser\nstmt: %s\nargs: %s\n", stmt, args))
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	var user model.User
+	if err := tx.QueryRow(stmt, args...).Scan(
+		&user.ID,
+		&user.RowStatus,
+		&user.CreatedTs,
+		&user.UpdatedTs,
+		&user.LastLoginTs,
+		&user.Username,
+		&user.Role,
+		&user.Email,
+		&user.ReciveBookEmail,
+		&user.Nickname,
+		&user.AvatarURL,
+		&user.Description,
+	); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }

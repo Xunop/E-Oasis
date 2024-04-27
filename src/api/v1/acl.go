@@ -28,24 +28,24 @@ func NewAuthInterceptor(store *store.Store, secret string) *AuthInterceptor {
 
 func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientIP := request.ClientIP(r)
-		accesstoken := getAccessToken(r)
-
-		if accesstoken == "" {
-			log.Debug("Failed to authentica because no access token provided",
-				zap.String("client_ip", clientIP),
-				zap.String("user_agent", r.UserAgent()),
-			)
-			response.Unauthorized(w, r)
+		if isUnauthorizeAllowed(r.URL.Path) {
+			next.ServeHTTP(w, r)
 			return
 		}
+		clientIP := request.FindClientIP(r)
+		accesstoken := getAccessToken(r)
+
+		// if accesstoken == "" {
+		// 	log.Debug("Failed to authentica because no access token provided",
+		// 		zap.String("client_ip", clientIP),
+		// 		zap.String("user_agent", r.UserAgent()),
+		// 	)
+		// 	response.Unauthorized(w, r)
+		// 	return
+		// }
 
 		username, err := m.authenticate(r.Context(), accesstoken)
 		if err != nil {
-			if isUnauthorizeAllowed(r.URL.Path) {
-				next.ServeHTTP(w, r)
-				return
-			}
 			log.Debug("Failed to authenticate user",
 				zap.String("client_ip", clientIP),
 				zap.String("user_agent", r.UserAgent()),
@@ -92,6 +92,7 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, request.UserIDContextKey, user.ID)
 		ctx = context.WithValue(ctx, request.UserNameContextKey, user.Username)
+		ctx = context.WithValue(ctx, request.UserRolesContextKey, user.Role)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -133,7 +134,7 @@ func (m *AuthInterceptor) authenticate(ctx context.Context, accessToken string) 
 
     accessTokens, err := m.store.GetUserAccessTokens(userID)
     if err != nil {
-    	return "", errors.Wrap(err, "failed to get user access tokens")
+        return "", errors.Wrap(err, "failed to get user access tokens")
     }
 
 	if !validateAccessToken(accessToken, accessTokens) {

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"net/http"
 	"os"
 
 	"github.com/Xunop/e-oasis/log"
@@ -38,4 +39,9 @@ func Server(router *mux.Router, store *store.Store, pool *worker.Pool) {
 	jwtSecret := sSetting.JWTSecret
 	// Add authentication middleware
 	sr.Use(NewAuthInterceptor(store, jwtSecret).AuthenticationInterceptor)
+	sr.Methods(http.MethodOptions)
+
+	sr.HandleFunc("/user", handler.createUser).Methods(http.MethodPost)
+	sr.HandleFunc("/users", handler.listUsers).Methods(http.MethodGet)
+    sr.HandleFunc("/signup", handler.signup).Methods(http.MethodPost)
 }

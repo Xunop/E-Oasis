@@ -48,8 +48,8 @@ func Accepted(w http.ResponseWriter, r *http.Request) {
 func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 	log.Error(http.StatusText(http.StatusInternalServerError),
 		zap.Error(err),
-		zap.String("client_ip", request.ClientIP(r)),
-		zap.String("client_ip", request.ClientIP(r)),
+		zap.String("client_ip", request.FindClientIP(r)),
+		zap.String("client_ip", request.FindClientIP(r)),
 		zap.String("request.method", r.Method),
 		zap.String("request.uri", r.RequestURI),
 		zap.String("request.user_agent", r.UserAgent()),
@@ -67,7 +67,7 @@ func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 func BadRequest(w http.ResponseWriter, r *http.Request, err error) {
 	log.Warn(http.StatusText(http.StatusBadRequest),
 		zap.Any("error", err),
-		zap.String("client_ip", request.ClientIP(r)),
+		zap.String("client_ip", request.FindClientIP(r)),
 		zap.String("request.method", r.Method),
 		zap.String("request.uri", r.RequestURI),
 		zap.String("request.user_agent", r.UserAgent()),
@@ -84,7 +84,7 @@ func BadRequest(w http.ResponseWriter, r *http.Request, err error) {
 // Unauthorized sends a not authorized error to the client.
 func Unauthorized(w http.ResponseWriter, r *http.Request) {
 	log.Warn(http.StatusText(http.StatusUnauthorized),
-		zap.String("client_ip", request.ClientIP(r)),
+		zap.String("client_ip", request.FindClientIP(r)),
 		zap.String("request.method", r.Method),
 		zap.String("request.uri", r.RequestURI),
 		zap.String("request.user_agent", r.UserAgent()),
@@ -101,7 +101,7 @@ func Unauthorized(w http.ResponseWriter, r *http.Request) {
 // Forbidden sends a forbidden error to the client.
 func Forbidden(w http.ResponseWriter, r *http.Request) {
 	log.Warn(http.StatusText(http.StatusForbidden),
-		zap.String("client_ip", request.ClientIP(r)),
+		zap.String("client_ip", request.FindClientIP(r)),
 		zap.String("request.method", r.Method),
 		zap.String("request.uri", r.RequestURI),
 		zap.String("request.user_agent", r.UserAgent()),
@@ -118,7 +118,7 @@ func Forbidden(w http.ResponseWriter, r *http.Request) {
 // NotFound sends a page not found error to the client.
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	log.Warn(http.StatusText(http.StatusNotFound),
-		zap.String("client_ip", request.ClientIP(r)),
+		zap.String("client_ip", request.FindClientIP(r)),
 		zap.String("request.method", r.Method),
 		zap.String("request.uri", r.RequestURI),
 		zap.String("request.user_agent", r.UserAgent()),

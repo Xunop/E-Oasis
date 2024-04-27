@@ -1,6 +1,8 @@
 package v1
 
-var authenticationAllowlist = map[string]bool{}
+var authenticationAllowlist = map[string]bool{
+	"/api/v1/signup": true,
+}
 
 // isUnauthorizeAllowed returns whether the method is exempted from authentication.
 func isUnauthorizeAllowed(fullMethodName string) bool {
