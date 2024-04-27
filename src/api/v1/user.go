@@ -67,7 +67,7 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 	// Store user in cache
 	h.store.UserCache.Store(newUser.ID, newUser)
 
-	response.Created(w, r, newUser)
+	response.Created(w, r, response.UserResponse(newUser))
 }
 
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,7 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.OK(w, r, users)
+	response.OK(w, r, response.UserListResponse(users))
 }
 
 func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
@@ -154,5 +154,5 @@ func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
 	// Store user in cache
 	h.store.UserCache.Store(newUser.ID, newUser)
 
-	response.Created(w, r, newUser)
+	response.Created(w, r, response.UserResponse(newUser))
 }

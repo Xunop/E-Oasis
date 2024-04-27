@@ -2,6 +2,7 @@ package v1
 
 var authenticationAllowlist = map[string]bool{
 	"/api/v1/signup": true,
+	"/api/v1/signin": true,
 }
 
 // isUnauthorizeAllowed returns whether the method is exempted from authentication.

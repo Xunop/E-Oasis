@@ -52,6 +52,7 @@ type ViewSetting struct {
 	ShowHotBook bool `json:"show_hot_book"`
 }
 
+// AccessTokensUserSetting_AccessToken represents an access token for the user.
 type AccessTokensUserSetting_AccessToken struct {
 	// The access token is a JWT token.
 	// Including expiration time, issuer, etc.
@@ -64,8 +65,25 @@ type AccessTokensUserSetting_AccessToken struct {
 	LastUsedTs int64 `json:"last_used_ts,omitempty"`
 }
 
+func (a *AccessTokensUserSetting_AccessToken) String() string {
+	if a == nil {
+		return ""
+	}
+	b, _ := json.Marshal(a)
+	return string(b)
+}
+
+// AccessTokensUserSetting represents the access tokens for the user.
 type AccessTokensUserSetting struct {
 	AccessTokens []*AccessTokensUserSetting_AccessToken `json:"access_tokens,omitempty"`
+}
+
+func (a *AccessTokensUserSetting) String() string {
+	if a == nil {
+		return ""
+	}
+	b, _ := json.Marshal(a)
+	return string(b)
 }
 
 func (e UserSettingKey) String() string {

@@ -60,6 +60,9 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 		orderBy = slices.Concat([]string{"RANDOM()"}, orderBy)
 	}
 
+	// Here will return password_hash, so need to be careful
+	// If need to response to client, need to remove password_hash
+	// Use response.UserResponse to remove password_hash
 	query := `
 		SELECT
 			id,
@@ -95,9 +98,6 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 
 	list := make([]*model.User, 0)
 	for rows.Next() {
-        columns, _ := rows.Columns()
-        fmt.Println(columns)
-        // [id username role email nickname password_hash avatar_url description created_ts updated_ts last_login_ts row_status]
 		var user model.User
 		// The ordering of query results should be consistent with query var
 		if err := rows.Scan(

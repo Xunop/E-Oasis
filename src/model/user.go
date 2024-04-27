@@ -1,4 +1,4 @@
-package model
+package model //import "github.com/Xunop/e-oasis/model"
 
 // Role is the type of a role.
 type Role string
@@ -25,7 +25,7 @@ func (e Role) String() string {
 }
 
 const (
-	SystemBotID         int32 = 0
+	SystemBotID int32 = 0
 )
 
 var (
@@ -77,7 +77,7 @@ type UserCreateRequest struct {
 	IsAdmin         bool   `json:"is_admin"`
 	Email           string `json:"email"`
 	ViewSettings    string `json:"view_settings"`
-	ReciveBookEmail string   `json:"recive_book_email"`
+	ReciveBookEmail string `json:"recive_book_email"`
 	Nickname        string `json:"nickname"`
 	AvatarURL       string `json:"avatar_url"`
 	Description     string `json:"description"`
@@ -87,4 +87,10 @@ type UserSignupRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Nickname string `json:"nickname"`
+}
+
+type UserSigninRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	NeverExpire bool `json:"never_expire"`
 }

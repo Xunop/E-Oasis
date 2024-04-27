@@ -9,21 +9,22 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *Store) SetUserSetting(userSetting *model.UserSetting) error {
+func (s *Store) UpsertUserSetting(userSetting *model.UserSetting) (*model.UserSetting, error) {
 	query := `
 		INSERT INTO user_setting (user_id, key, value)
 		VALUES (?, ?, ?)
-		ON DUPLICATE KEY UPDATE value = ?
+        ON CONFLICT(user_id, key) DO UPDATE
+		SET value = EXCLUDED.value
 	`
 
-	log.Debug("SetUserSetting", zap.String("query", query), zap.Any("args", userSetting))
+	// log.Debug("SetUserSetting", zap.String("query", query), zap.Any("args", userSetting))
 
 	_, err := s.db.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value, userSetting.Value)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s.UserSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key.String()), userSetting)
-	return nil
+	return userSetting, nil
 }
 
 func (s *Store) GetUserSetting(find *model.FindUserSetting) (*model.UserSetting, error) {
@@ -134,4 +135,28 @@ func validateAccessToken(accessTokenString string, userAccessTokens []*model.Acc
 		}
 	}
 	return false
+}
+
+func (s *Store) UpsetAccessTokenToStore(user *model.User, accessToken, description string) error {
+	userAccessTokens, err := s.GetUserAccessTokens(user.ID)
+	if err != nil {
+		return errors.Wrap(err, "unable to update access token")
+	}
+	userAccessToken := &model.AccessTokensUserSetting_AccessToken{
+		AccessToken: accessToken,
+		Description: description,
+	}
+	userAccessTokens = append(userAccessTokens, userAccessToken)
+	tokens := &model.AccessTokensUserSetting{
+		AccessTokens: userAccessTokens,
+	}
+	if _, err := s.UpsertUserSetting(&model.UserSetting{
+		UserID: user.ID,
+		Key:    model.UserSettingKey_USER_SETTING_ACCESS_TOKENS,
+		Value:  tokens.String(),
+	}); err != nil {
+		return errors.Wrap(err, "unable to update access token")
+	}
+
+	return nil
 }

@@ -1,4 +1,4 @@
-package response // import "github.com/Xunop/e-learn/http/response/json"
+package response // import "github.com/Xunop/e-learn/http/response"
 
 import (
 	"encoding/json"
