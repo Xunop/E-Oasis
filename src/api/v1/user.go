@@ -29,6 +29,7 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Username must use letters, numbers.
 	if err := validator.ValidateUserCreateRequest(h.store, &create); err != nil {
 		log.Error("Failed to validate user", zap.Error(err))
 		response.BadRequest(w, r, err)
@@ -72,7 +73,8 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 	if request.GetUserRole(r) != model.RoleHost && request.GetUserRole(r) != model.RoleAdmin {
-		log.Error("Unauthorized request")
+		log.Error("Unauthorized request by", zap.String("role", request.GetUserRole(r).String()),
+			zap.String("username", request.GetUsername(r)))
 		response.Unauthorized(w, r)
 		return
 	}
@@ -89,6 +91,7 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
 	generalSetting, err := h.store.GetSystemGeneralSetting()
+	log.Debug("General setting", zap.Any("setting", generalSetting))
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Error("Failed to get general system setting")
@@ -132,7 +135,7 @@ func (h *Handler) signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existedHostUser == nil {
-        newRole = model.RoleHost
+		newRole = model.RoleHost
 	} else {
 		newRole = model.RoleUser
 	}

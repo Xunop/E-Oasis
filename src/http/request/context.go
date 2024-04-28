@@ -34,7 +34,7 @@ func GetUserID(r *http.Request) string {
 	return getContextStringValue(r, UserIDContextKey)
 }
 
-func GetUserName(r *http.Request) string {
+func GetUsername(r *http.Request) string {
 	return getContextStringValue(r, UserNameContextKey)
 }
 

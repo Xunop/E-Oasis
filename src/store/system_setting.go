@@ -22,7 +22,7 @@ func (s *Store) GetSystemSetting(name string) (*model.SystemSetting, error) {
     SELECT * FROM system_setting WHERE name = ?
 	`
 	if err := s.db.QueryRow(stmt, name).Scan(&setting.Name, &setting.Value, &setting.Description); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get system setting")
 	}
 
 	return setting, nil
@@ -31,13 +31,13 @@ func (s *Store) GetSystemSetting(name string) (*model.SystemSetting, error) {
 func (s *Store) GetSystemBasicSetting() (*model.SystemSettingBasic, error) {
 	systemSetting, err := s.GetSystemSetting(model.SettingTypeBasic)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get system basic setting")
 	}
 	// var basicSetting model.SystemSettingBasic
 	basicSetting := &model.SystemSettingBasic{}
 	err = json.Unmarshal([]byte(systemSetting.Value), basicSetting)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal system basic setting")
 	}
 	return basicSetting, nil
 }
@@ -45,12 +45,12 @@ func (s *Store) GetSystemBasicSetting() (*model.SystemSettingBasic, error) {
 func (s *Store) GetSystemGeneralSetting() (*model.SystemSettingGeneral, error) {
 	systemSetting, err := s.GetSystemSetting(model.SettingTypeGeneral)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get system general setting")
 	}
 	generalSetting := &model.SystemSettingGeneral{}
 	err = json.Unmarshal([]byte(systemSetting.Value), generalSetting)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal system general setting")
 	}
 	return generalSetting, nil
 }
@@ -133,7 +133,7 @@ func (s *Store) UpsetSystemSetting(setting *model.SystemSetting) (*model.SystemS
 		description = EXCLUDED.description
 	`
 	if _, err := s.db.Exec(stmt, newSetting.Name, newSetting.Value, newSetting.Description); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to insert/update system setting")
 	}
 	s.SystemSettingCache.Store(newSetting.Name, newSetting)
 	return newSetting, nil
@@ -147,7 +147,7 @@ func (s *Store) GetOrUpsetSystemSecuritySetting() (*model.SystemSettingSecurity,
 			log.Debug("SQL no rows, create security setting")
 			modified = true
 		} else {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to get security settings")
 		}
 	}
 	if systemSetting == nil {
@@ -159,7 +159,7 @@ func (s *Store) GetOrUpsetSystemSecuritySetting() (*model.SystemSettingSecurity,
 	if systemSetting != nil {
 		err = json.Unmarshal([]byte(systemSetting.Value), securitySetting)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to unmarshal security settings")
 		}
 	}
 
@@ -180,9 +180,22 @@ func (s *Store) GetOrUpsetSystemSecuritySetting() (*model.SystemSettingSecurity,
 			Value: securitySetting.ToJSON(),
 		})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to upset security settings")
 		}
 		log.Debug("Security setting created", zap.String("type", model.SettingTypeSecurity))
 	}
 	return securitySetting, nil
+}
+
+// TODO: Implement patch updates
+func (s *Store) UpsetGeneralSettings(settings *model.SystemSettingGeneral) (*model.SystemSettingGeneral, error) {
+	_, err := s.UpsetSystemSetting(&model.SystemSetting{
+		Name:  model.SettingTypeGeneral,
+		Value: settings.ToJSON(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to upset general settings")
+	}
+
+	return settings, nil
 }

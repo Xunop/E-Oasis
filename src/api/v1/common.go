@@ -10,7 +10,7 @@ import (
 
 func getCurrentUser(r *http.Request, s *store.Store) (*model.User, error) {
 	// Get the current user from the request
-	username := request.GetUserName(r)
+	username := request.GetUsername(r)
 	if username == "" {
 		// If the user is not logged in, return an error
 		return nil, nil

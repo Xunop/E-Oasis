@@ -64,6 +64,14 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 			response.ServerError(w, r, err)
 			return
 		}
+
+		log.Debug("User found",
+			zap.String("client_ip", clientIP),
+			zap.String("user_agent", r.UserAgent()),
+			zap.String("username", username),
+			zap.String("role", user.Role.String()),
+		)
+
 		if user == nil {
 			log.Debug("User not found",
 				zap.String("client_ip", clientIP),
@@ -83,16 +91,23 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 			return
 		}
 		if isOnlyForAdminAllowedPath(r.URL.Path) && user.Role != model.RoleHost && user.Role != model.RoleAdmin {
+			log.Debug("User is not allowed to access this path",
+				zap.String("client_ip", clientIP),
+				zap.String("user_agent", r.UserAgent()),
+				zap.String("username", username),
+				zap.String("role", user.Role.String()),
+			)
 			response.Unauthorized(w, r)
 		}
 
 		m.store.SetLastLogin(user.ID)
 		m.store.SetAPIKeyUsedTimeStamp(user.ID, accesstoken)
 
+		// Set user context
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, request.UserIDContextKey, user.ID)
 		ctx = context.WithValue(ctx, request.UserNameContextKey, user.Username)
-		ctx = context.WithValue(ctx, request.UserRolesContextKey, user.Role)
+		ctx = context.WithValue(ctx, request.UserRolesContextKey, user.Role.String())
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -125,22 +140,26 @@ func (m *AuthInterceptor) authenticate(ctx context.Context, accessToken string) 
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get user")
 	}
-	if user != nil {
+	if user == nil {
 		return "", errors.Errorf("user not found with ID: %d", userID)
 	}
 	if user.RowStatus == model.Archived {
-	    return "", errors.Errorf("user is archived with ID: %d", userID)
+		return "", errors.Errorf("user is archived with ID: %d", userID)
 	}
 
-    accessTokens, err := m.store.GetUserAccessTokens(userID)
-    if err != nil {
-        return "", errors.Wrap(err, "failed to get user access tokens")
-    }
+	accessTokens, err := m.store.GetUserAccessTokens(userID)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get user access tokens")
+	}
 
 	if !validateAccessToken(accessToken, accessTokens) {
 		return "", errors.New("invalid access token")
 	}
 
+	log.Debug("User authenticated",
+		zap.String("username", user.Username),
+		zap.String("role", user.Role.String()),
+	)
 	return user.Username, nil
 }
 

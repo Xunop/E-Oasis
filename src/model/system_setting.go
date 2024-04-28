@@ -21,12 +21,27 @@ type SystemSettingBasic struct {
 	LogFile  string `json:"log_file"`
 }
 
+func (s *SystemSettingBasic) ToJSON() string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
 type SystemSettingGeneral struct {
-	DisableSignup         bool `json:"allow_registration"`
+	DisableSignup         bool `json:"disallow_registration"`
 	DisallowPasswordLogin bool `json:"disallow_password_login"`
 }
 
+func (s *SystemSettingGeneral) ToJSON() string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
 type SystemSettingPlugins struct {
+}
+
+func (s *SystemSettingPlugins) ToJSON() string {
+	b, _ := json.Marshal(s)
+	return string(b)
 }
 
 type SystemSettingSecurity struct {

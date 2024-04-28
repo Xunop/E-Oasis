@@ -35,9 +35,13 @@ func Fatal(msg string, fields ...zap.Field) {
 
 func Fallback(level string, msg string) {
 	if level == "Error" {
-	    fmt.Fprint(os.Stderr, msg)
-	} else {
-        fmt.Fprint(os.Stdin, msg)
+		fmt.Fprint(os.Stderr, msg)
+	} else if level == "Info" {
+		fmt.Fprint(os.Stdin, msg)
+	} else if level == "Debug" {
+		if config.Opts.LogLevel == "debug" {
+			fmt.Fprint(os.Stdout, msg)
+		}
 	}
 }
 

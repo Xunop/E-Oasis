@@ -33,7 +33,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user == nil {
-		log.Error("User not found")
+		log.Warn("User not found")
 		response.NotFound(w, r)
 		return
 	}

@@ -1,12 +1,12 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 func (s *Store) UpsertUserSetting(userSetting *model.UserSetting) (*model.UserSetting, error) {
@@ -18,8 +18,10 @@ func (s *Store) UpsertUserSetting(userSetting *model.UserSetting) (*model.UserSe
 	`
 
 	// log.Debug("SetUserSetting", zap.String("query", query), zap.Any("args", userSetting))
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("SetUserSetting query: %s\nargs:\nUserID:%d\nKey:%s\nValue:%s\n", query, userSetting.UserID, userSetting.Key.String(), userSetting.Value))
 
-	_, err := s.db.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value, userSetting.Value)
+	_, err := s.db.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +70,8 @@ func (s *Store) ListUserSettings(find *model.FindUserSetting) ([]*model.UserSett
 		FROM user_setting
 		WHERE ` + strings.Join(where, " AND ")
 
-	log.Debug("ListUserSettings", zap.String("query", query), zap.Any("args", args))
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", query, args))
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {

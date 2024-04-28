@@ -55,6 +55,13 @@ func ValidateSignupRequest(s *store.Store, user *model.UserSignupRequest) error 
 	return nil
 }
 
+func ValidateGeneralSettings(settings *model.SystemSettingGeneral) error {
+	if settings == nil {
+		return errors.New("settings is nil")
+	}
+	return nil
+}
+
 func validatePassword(password string) error {
 	if len(password) < 6 {
 		return errors.New("password is too short")
