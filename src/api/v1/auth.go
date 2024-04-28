@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,10 +13,16 @@ import (
 	"github.com/Xunop/e-oasis/http/response"
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/validator"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// TODO: Implement the SignInWithSSO method
+func (h *Handler) SignInWithSSO() {
+
+}
 
 func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 	var sigin model.UserSigninRequest
@@ -91,6 +98,77 @@ func (h *Handler) doSignIn(ctx context.Context, user *model.User, expireTime tim
 	w := ctx.Value("responseWriter").(http.ResponseWriter)
 	w.Header().Set("Set-Cookie", cookie)
 	return nil
+}
+
+func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
+	generalSetting, err := h.store.GetSystemGeneralSetting()
+	log.Debug("General setting", zap.Any("setting", generalSetting))
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Error("Failed to get general system setting")
+			response.ServerError(w, r, err)
+			return
+		}
+	}
+
+	// Check if signup is disabled
+	if generalSetting != nil && generalSetting.DisableSignup {
+		log.Debug("Signup is disabled")
+		response.Forbidden(w, r)
+		return
+	}
+
+	signup := &model.UserSignupRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&signup); err != nil {
+		log.Error("Failed to decode request body", zap.Error(err))
+		response.BadRequest(w, r, err)
+		return
+	}
+
+	// Validate request
+	if err := validator.ValidateSignupRequest(h.store, signup); err != nil {
+		log.Error("Failed to validate signup request", zap.Error(err))
+		response.BadRequest(w, r, err)
+		return
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(signup.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Error("Failed to generate password hash")
+		response.ServerError(w, r, err)
+	}
+	var newRole model.Role
+	hostType := model.RoleHost
+	existedHostUser, err := h.store.GetUser(&model.FindUser{Role: &hostType})
+	if err != nil {
+		log.Error("Failed to get users", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+	if existedHostUser == nil {
+		newRole = model.RoleHost
+	} else {
+		newRole = model.RoleUser
+	}
+
+	user := model.User{
+		Username:     signup.Username,
+		Nickname:     signup.Nickname,
+		PasswordHash: string(passwordHash),
+		Role:         newRole,
+	}
+
+	newUser, err := h.store.CreateUser(&user)
+	if err != nil {
+		log.Error("Failed to signup user", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+
+	// Store user in cache
+	h.store.UserCache.Store(newUser.ID, newUser)
+
+	response.Created(w, r, response.UserResponse(newUser))
 }
 
 func (h *Handler) buildAccessTokenCookie(accessToken string, expireTime time.Time, origin string) (string, error) {

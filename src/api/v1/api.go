@@ -43,7 +43,7 @@ func Server(router *mux.Router, store *store.Store, pool *worker.Pool) {
 
 	sr.HandleFunc("/user", handler.createUser).Methods(http.MethodPost)
 	sr.HandleFunc("/users", handler.listUsers).Methods(http.MethodGet)
-    sr.HandleFunc("/signup", handler.signup).Methods(http.MethodPost)
+    sr.HandleFunc("/signup", handler.signUp).Methods(http.MethodPost)
     sr.HandleFunc("/signin", handler.signIn).Methods(http.MethodPost)
     sr.HandleFunc("/settings/general", handler.SetGeneralSettings).Methods(http.MethodPost)
 }
