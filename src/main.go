@@ -47,19 +47,27 @@ var (
 			defer cancle()
 
 			// Will create a sqlite database
-			db, err := db.NewDB()
+			systemDb, err := db.NewDB(config.Opts.DSN)
 			if err != nil {
 				cancle()
 				fmt.Println("Error connecting to database", err)
 				return
 			}
-			defer db.Close()
-			if err := db.Migrate(ctx); err != nil {
+			defer systemDb.Close()
+			if err := systemDb.Migrate(ctx); err != nil {
 				cancle()
 				fmt.Println("Error migrating database,", err)
 			}
 
-			store := store.NewStore(db.DB)
+			metaDb, err := db.NewDB(config.Opts.MetaDSN)
+			if err != nil {
+				cancle()
+				fmt.Println("Error connecting to metadata database", err)
+				return
+			}
+			defer metaDb.Close()
+
+			store := store.NewStore(systemDb.DB, metaDb.DB)
 			if err := store.Ping(); err != nil {
 				cancle()
 				fmt.Println("Error pinging database", err)

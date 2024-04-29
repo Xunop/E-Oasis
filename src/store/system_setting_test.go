@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/config"
+	"github.com/Xunop/e-oasis/log"
 	"github.com/pkg/errors"
 	_ "modernc.org/sqlite"
 )
@@ -18,6 +18,7 @@ const (
 )
 
 var d *sql.DB
+var md *sql.DB
 var dir string
 
 // Initialize the logger and config
@@ -37,7 +38,9 @@ func createDb() error {
 		}
 	}
 	filename := dir + "/test_for_system_setting.db"
+	metapath := dir + "/metadata.db"
 	d, _ = sql.Open("sqlite", filename)
+	md, _ = sql.Open("sqlite", metapath)
 	return nil
 }
 
@@ -80,15 +83,15 @@ func TestGetOrUpsetSystemSetting(t *testing.T) {
 	}
 	defer os.Remove(dir)
 	applyLatestSchema(d)
-	s := NewStore(d)
+	s := NewStore(d, md)
 	system, err := s.GetOrUpsetSystemSecuritySetting()
 	if err != nil {
 		t.Fatalf("Failed to create system setting: %v", err)
 	}
-    t.Logf("System setting: %s", system.ToJSON())
-    if system.JWTSecret == "" {
-        t.Fatalf("JWT secret is empty")
-    }
+	t.Logf("System setting: %s", system.ToJSON())
+	if system.JWTSecret == "" {
+		t.Fatalf("JWT secret is empty")
+	}
 }
 
 func TestGetBasicSystemSetting(t *testing.T) {
@@ -96,7 +99,7 @@ func TestGetBasicSystemSetting(t *testing.T) {
 	createDb()
 	defer os.Remove(dir)
 	applyLatestSchema(d)
-	s := NewStore(d)
+	s := NewStore(d, md)
 	basic, err := s.GetSystemBasicSetting()
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -107,16 +110,16 @@ func TestGetBasicSystemSetting(t *testing.T) {
 }
 
 func TestGetGeneralSystemSetting(t *testing.T) {
-    // Test code here
-    createDb()
-    defer os.Remove(dir)
-    applyLatestSchema(d)
-    s := NewStore(d)
-    general, err := s.GetSystemGeneralSetting()
-    if err != nil {
-        if !errors.Is(err, sql.ErrNoRows) {
-            t.Fatalf("Failed to get system setting: %v", err)
-        }
-    }
-    t.Logf("General system setting: %v", general)
+	// Test code here
+	createDb()
+	defer os.Remove(dir)
+	applyLatestSchema(d)
+	s := NewStore(d, md)
+	general, err := s.GetSystemGeneralSetting()
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("Failed to get system setting: %v", err)
+		}
+	}
+	t.Logf("General system setting: %v", general)
 }

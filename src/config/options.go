@@ -8,6 +8,7 @@ const (
 	defaultLogFileMaxAge          = 28
 	defaultLogCompress            = false
 	defaultDSN                    = "./e-oasis.db"
+	defaultMetaDSN				  = "./metadata.db"
 	defaultPort                   = 8080
 	defaultHost                   = "0.0.0.0"
 	defaultData                   = "/var/opt/e-oasis"
@@ -41,6 +42,8 @@ type Options struct {
 	LogCompress bool `mapstructure:"log_compress"`
 	// databaseURL is the URL of the database to connect to(sqlite)
 	DSN string `mapstructure:"dsn_uri"`
+	// metaDSN is the URL of the calibre database to connect to(sqlite)
+	MetaDSN string `mapstructure:"meta_dsn_uri"`
 	// port is the port to listen on
 	Port int `mapstructure:"port"`
 	// host is the host to listen on
@@ -65,6 +68,7 @@ func GetDefaultOptions() *Options {
 		LogFileMaxAge:          defaultLogFileMaxAge,
 		LogCompress:            defaultLogCompress,
 		DSN:                    defaultDSN,
+		MetaDSN:                defaultMetaDSN,
 		Port:                   defaultPort,
 		Host:                   defaultHost,
 		Data:                   defaultData,

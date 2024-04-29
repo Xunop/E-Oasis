@@ -23,13 +23,13 @@ type DB struct {
 	*sql.DB
 }
 
-func NewDB() (*DB, error) {
+func NewDB(path string) (*DB, error) {
 	if config.Opts.DSN == "" {
 		return nil, errors.New("Database URL is required")
 	}
 
 	// TODO: Add parameter
-	d, err := sql.Open("sqlite", config.Opts.DSN)
+	d, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
@@ -134,12 +134,13 @@ func (d *DB) Migrate(ctx context.Context) error {
 }
 
 const (
-	latestSchemaFileName = "LATEST_SCHEMA.sql"
+	latestSystemSchemaFileName = "LATEST_SYSTEM_SCHEMA.sql"
+	latestMetaSchemaFileName   = "LATEST_META_SCHEMA.sql"
 )
 
 func (d *DB) applyLatestSchema() error {
 	// Read latest schema file
-	latestSchemaPath := fmt.Sprintf("migration/%s", latestSchemaFileName)
+	latestSchemaPath := fmt.Sprintf("migration/%s", latestSystemSchemaFileName)
 	buf, err := migrationFS.ReadFile(latestSchemaPath)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to read latest schema file: %q", latestSchemaPath)

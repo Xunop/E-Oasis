@@ -47,8 +47,8 @@ CREATE TABLE shelf (
 	is_public SMALLINT DEFAULT 0,
 	user_id INTEGER,
 	created BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
- 	last_modified BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
- 	display_order INTEGER NOT NULL COLLATE NOCASE,
+	last_modified BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
+	display_order INTEGER NOT NULL COLLATE NOCASE,
 	order_reverse SMALLINT DEFAULT 0,
 	PRIMARY KEY (id),
 	FOREIGN KEY(user_id) REFERENCES user (id)
