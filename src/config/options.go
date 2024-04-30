@@ -7,11 +7,11 @@ const (
 	defaultLogFileMaxBackups      = 3
 	defaultLogFileMaxAge          = 28
 	defaultLogCompress            = false
-	defaultDSN                    = "./e-oasis.db"
-	defaultMetaDSN				  = "./metadata.db"
 	defaultPort                   = 8080
 	defaultHost                   = "0.0.0.0"
 	defaultData                   = "/var/opt/e-oasis"
+	defaultDSN                    = defaultData + "/e-oasis.db"
+	defaultMetaDSN				  = defaultData + "/metadata.db"
 	defaultMetricsCollector       = false
 	defaultMetricsRefreshInterval = 15
 	defaultMetricsAllowedNetworks = "127.0.0.1/8"

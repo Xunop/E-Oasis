@@ -8,10 +8,10 @@ import (
 	"syscall"
 
 	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/store/db"
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/server"
 	"github.com/Xunop/e-oasis/store"
+	"github.com/Xunop/e-oasis/store/db"
 	"github.com/Xunop/e-oasis/worker"
 	"github.com/spf13/cobra"
 )
@@ -115,12 +115,16 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	config.GetConfig()
+	_, err := config.GetConfig()
+	if err != nil {
+		fmt.Println("Error getting config", err)
+		os.Exit(1)
+	}
 
 	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "Database connection string")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "", "localhost", "Server host")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 8080, "Server port")
-	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "data", "Data directory")
+	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "", "Data directory")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Debug mode")
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "Config file")
 

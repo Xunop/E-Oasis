@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -22,10 +23,9 @@ func GetConfig() (*Options, error) {
 	}
 
 	Opts.Data = dataDir
-	if Opts.DSN == "" {
-		dbFile := filepath.Join(Opts.Data, "e-oasis.db")
-		Opts.DSN = dbFile
-	}
+	Opts.DSN = filepath.Join(Opts.Data, "/e-oasis.db")
+	Opts.MetaDSN = filepath.Join(Opts.Data, "/metadata.db")
+	fmt.Println("Data directory: ", Opts.Data)
 
 	return Opts, nil
 }
@@ -48,6 +48,21 @@ func checkDataDir(dataDir string) (string, error) {
 		if dataDir == defaultData {
 			err := os.MkdirAll(dataDir, 0755)
 			if err != nil {
+				if errors.Is(err, os.ErrPermission) {
+					// Permission denied, try to create in user's home directory
+					currentUser, err := user.Current()
+					if err != nil {
+						return "", errors.Wrap(err, "unable to get current user")
+					}
+					homeDir := currentUser.HomeDir
+					fmt.Println("Permission denied, trying to create data folder in user's home directory")
+					err = os.MkdirAll(filepath.Join(homeDir, "/.e-oasis"), 0755)
+					if err != nil {
+						return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)
+					}
+					fmt.Println("Data folder created in user's home directory: ", homeDir+"/.e-oasis")
+					return filepath.Join(homeDir, "/.e-oasis"), nil
+				}
 				return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)
 			}
 		}
