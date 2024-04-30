@@ -44,6 +44,9 @@ func checkDataDir(dataDir string) (string, error) {
 	// Trim trailing \ or / in case user supplies
 	dataDir = strings.TrimRight(dataDir, "\\/")
 	if _, err := os.Stat(dataDir); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+		    return "", errors.Wrapf(err, "unable to access data folder %s", dataDir)
+		}
 		// Create dir
 		if dataDir == defaultData {
 			err := os.MkdirAll(dataDir, 0755)
@@ -66,7 +69,6 @@ func checkDataDir(dataDir string) (string, error) {
 				return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)
 			}
 		}
-		return "", errors.Wrapf(err, "unable to access data folder %s", dataDir)
 	}
 	return dataDir, nil
 }
