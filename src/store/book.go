@@ -93,6 +93,10 @@ func (s *Store) ListBooks(find *model.FindBook) ([]*model.Book, error) {
         }
         list = append(list, &book)
     }
-    // TODO:
-    return nil, nil
+    return list, nil
+}
+
+// TODO: Implement AddBook
+func (s *Store) AddBook(book *model.Book) error {
+    return nil
 }

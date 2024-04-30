@@ -1,4 +1,4 @@
-package model
+package model //import "github.com/Xunop/e-oasis/model"
 
 type Meta struct {
 }

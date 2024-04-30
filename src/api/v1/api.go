@@ -46,5 +46,6 @@ func Server(router *mux.Router, store *store.Store, pool *worker.Pool) {
     sr.HandleFunc("/signup", handler.signUp).Methods(http.MethodPost)
     sr.HandleFunc("/signin", handler.signIn).Methods(http.MethodPost)
     sr.HandleFunc("/settings/general", handler.SetGeneralSettings).Methods(http.MethodPost)
-    // sr.HandleFcun("/books", handler.listBooks).Methods(http.MethodGet)
+    sr.HandleFunc("/books", handler.listBooks).Methods(http.MethodGet)
+    sr.HandleFunc("/book/{id}", handler.addBook).Methods(http.MethodPost)
 }
