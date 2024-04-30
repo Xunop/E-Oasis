@@ -15,8 +15,9 @@ import (
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/store"
+	"github.com/Xunop/e-oasis/util"
 	"github.com/Xunop/e-oasis/version"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 )
 
 type DB struct {
@@ -28,11 +29,27 @@ func NewDB(path string) (*DB, error) {
 		return nil, errors.New("Database URL is required")
 	}
 
-	// TODO: Add parameter
 	d, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
+	defer d.Close()
+
+	// Register custom functions
+	sqlite.MustRegisterFunction("sortconcat", &sqlite.FunctionImpl{
+		NArgs:         2,
+		Deterministic: true,
+		MakeAggregate: func(ctx sqlite.FunctionContext) (sqlite.AggregateFunction, error) {
+			return util.NewSortedConcatenate(","), nil
+		},
+	})
+	sqlite.MustRegisterFunction("concat", &sqlite.FunctionImpl{
+		NArgs:         1,
+		Deterministic: true,
+		MakeAggregate: func(ctx sqlite.FunctionContext) (sqlite.AggregateFunction, error) {
+			return util.NewConcatenate(","), nil
+		},
+	})
 
 	db := &DB{d}
 
