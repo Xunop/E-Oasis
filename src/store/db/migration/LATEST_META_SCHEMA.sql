@@ -1,4 +1,3 @@
-BEGIN TRANSACTION;
 CREATE TABLE IF NOT EXISTS "authors" (
 	"id"	INTEGER,
 	"name"	TEXT NOT NULL COLLATE NOCASE,
@@ -7,6 +6,7 @@ CREATE TABLE IF NOT EXISTS "authors" (
 	UNIQUE("name"),
 	PRIMARY KEY("id")
 );
+
 CREATE TABLE IF NOT EXISTS "books" (
 	"id"	INTEGER,
 	"title"	TEXT NOT NULL DEFAULT 'Unknown' COLLATE NOCASE,
@@ -21,9 +21,10 @@ CREATE TABLE IF NOT EXISTS "books" (
 	"flags"	INTEGER NOT NULL DEFAULT 1,
 	"uuid"	TEXT,
 	"has_cover"	BOOL DEFAULT 0,
-	"last_modified"	TIMESTAMP NOT NULL DEFAULT 2000-01-01 00:00:00+00:00,
+	"last_modified"	TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00+00:00',
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
+
 CREATE TABLE IF NOT EXISTS "books_authors_link" (
 	"id"	INTEGER,
 	"book"	INTEGER NOT NULL,
@@ -97,7 +98,7 @@ CREATE TABLE IF NOT EXISTS "custom_columns" (
 	"datatype"	TEXT NOT NULL,
 	"mark_for_delete"	BOOL NOT NULL DEFAULT 0,
 	"editable"	BOOL NOT NULL DEFAULT 1,
-	"display"	TEXT NOT NULL DEFAULT {},
+	"display"	TEXT NOT NULL DEFAULT '{}',
 	"is_multiple"	BOOL NOT NULL DEFAULT 0,
 	"normalized"	BOOL NOT NULL,
 	UNIQUE("label"),
@@ -777,4 +778,9 @@ CREATE VIEW tag_browser_tags AS SELECT
                      ratings.id = bl.rating AND ratings.rating <> 0) avg_rating,
                      name AS sort
                 FROM tags;
-COMMIT;
+
+-- migration_history
+CREATE TABLE migration_history (
+  version TEXT NOT NULL PRIMARY KEY,
+  created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now'))
+);

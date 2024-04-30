@@ -7,7 +7,7 @@ import (
 	sqlite3 "modernc.org/sqlite"
 )
 
-func init() {
+func registger() {
 	sqlite3.MustRegisterFunction("sortconcat", &sqlite3.FunctionImpl{
 		NArgs:         2,
 		Deterministic: true,
@@ -25,8 +25,9 @@ func init() {
 }
 
 func TestCustomFunction(t *testing.T) {
+	registger()
 	withDB := func(test func(db *sql.DB)) {
-		db, err := sql.Open("sqlite", "file:memory:")
+		db, err := sql.Open("sqlite", ":memory:")
 		if err != nil {
 			t.Fatalf("failed to open database: %v", err)
 		}

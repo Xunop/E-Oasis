@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/Xunop/e-oasis/store"
+	"github.com/pkg/errors"
 )
 
 func (d *DB) UpsertMigrationHistory(ctx context.Context, upsert *store.UpsertMigrationHistory) (*store.MigrationHistory, error) {
@@ -54,4 +56,17 @@ func (d *DB) FindMigrationHistoryList(ctx context.Context, _ *store.FindMigratio
 	}
 
 	return list, nil
+}
+
+func (d *DB) CheckTableExists(ctx context.Context, tableName string) (bool, error) {
+	query := "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+	var name string
+	if err := d.DB.QueryRowContext(ctx, query, tableName).Scan(&name); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

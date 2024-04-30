@@ -12,29 +12,20 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"modernc.org/sqlite"
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/util"
 	"github.com/Xunop/e-oasis/version"
-	"modernc.org/sqlite"
+	"github.com/Xunop/e-oasis/util"
 )
 
 type DB struct {
 	*sql.DB
+	name string
 }
 
-func NewDB(path string) (*DB, error) {
-	if config.Opts.DSN == "" {
-		return nil, errors.New("Database URL is required")
-	}
-
-	d, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
-	defer d.Close()
-
+func init() {
 	// Register custom functions
 	sqlite.MustRegisterFunction("sortconcat", &sqlite.FunctionImpl{
 		NArgs:         2,
@@ -50,8 +41,19 @@ func NewDB(path string) (*DB, error) {
 			return util.NewConcatenate(","), nil
 		},
 	})
+}
 
-	db := &DB{d}
+func NewDB(path, name string) (*DB, error) {
+	if config.Opts.DSN == "" {
+		return nil, errors.New("Database URL is required")
+	}
+
+	d, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+
+	db := &DB{d, name}
 
 	return db, nil
 }
@@ -68,12 +70,25 @@ var seedFS embed.FS
 
 // Migrate applies the latest schema to the database
 func (d *DB) Migrate(ctx context.Context) error {
+	switch d.name {
+	case "system":
+		fmt.Println("Migrate system database")
+		return d.migrateSystem(ctx)
+	case "meta":
+		fmt.Println("Migrate meta database")
+		return d.migrateMeta(ctx)
+	default:
+		return errors.New("Unknown db name")
+	}
+}
+
+func (d *DB) migrateSystem(ctx context.Context) error {
 	currentVersion := version.GetCurrentVersion()
 	fmt.Println("Current version: ", currentVersion)
 	if _, err := os.Stat(config.Opts.DSN); err != nil {
 		// If the db file does not exist, create a new one with latest schema
 		if errors.Is(err, os.ErrNotExist) {
-			if err := d.applyLatestSchema(); err != nil {
+			if err := d.applyLatestSchema(ctx); err != nil {
 				return errors.Wrap(err, "failed to apply latest schema")
 			}
 			// Upset the newest version to migration table
@@ -153,19 +168,62 @@ func (d *DB) Migrate(ctx context.Context) error {
 const (
 	latestSystemSchemaFileName = "LATEST_SYSTEM_SCHEMA.sql"
 	latestMetaSchemaFileName   = "LATEST_META_SCHEMA.sql"
+	updateMetaSchemaFileName   = "UPDATE_META.sql"
 )
 
-func (d *DB) applyLatestSchema() error {
+// migrateMeta migrate the views in the calibre database
+func (d *DB) migrateMeta(ctx context.Context) error {
+	if _, err := os.Stat(config.Opts.MetaDSN); err != nil {
+		// If the db file does not exist, create a new one with latest schema
+		if errors.Is(err, os.ErrNotExist) {
+			if err := d.applyLatestSchema(ctx); err != nil {
+				return errors.Wrap(err, "failed to apply latest schema")
+			}
+		} else {
+			return errors.Wrap(err, "failed to check database file")
+		}
+	} else {
+		// If the db file exist, update the views.
+		// Don't need to update the tables.
+		exist, err := d.CheckTableExists(ctx, "migration_history")
+		if err != nil {
+			return errors.Wrap(err, "failed to check database table")
+		}
+		if exist {
+			// Table exist and don't need to update
+			return nil
+		} else {
+			// Table not exist, need to update
+			// update will create `migration_history` table
+			updatePath := fmt.Sprintf("migration/%s", updateMetaSchemaFileName)
+			buf, err := migrationFS.ReadFile(updatePath)
+			if err != nil {
+				return errors.Wrapf(err, "failed to read update schema file: %q", updatePath)
+			}
+
+			stmt := string(buf)
+			if err := d.execute(ctx, stmt); err != nil {
+				return errors.Wrapf(err, "failed to apply update schema: %s", stmt)
+			}
+		}
+	}
+	return nil
+}
+
+func (d *DB) applyLatestSchema(ctx context.Context) error {
 	// Read latest schema file
 	latestSchemaPath := fmt.Sprintf("migration/%s", latestSystemSchemaFileName)
+	if d.name == "meta" {
+		latestSchemaPath = fmt.Sprintf("migration/%s", latestMetaSchemaFileName)
+	}
 	buf, err := migrationFS.ReadFile(latestSchemaPath)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to read latest schema file: %q", latestSchemaPath)
+		return errors.Wrapf(err, "failed to read latest schema file: %q", latestSchemaPath)
 	}
 
 	stmt := string(buf)
-	if err := d.execute(context.Background(), stmt); err != nil {
-		return errors.Wrapf(err, "Failed to apply latest schema: %s", stmt)
+	if err := d.execute(ctx, stmt); err != nil {
+		return errors.Wrapf(err, "failed to apply latest schema: %s", stmt)
 	}
 	return nil
 }
