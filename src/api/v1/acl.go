@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/Xunop/e-oasis/api/auth"
@@ -65,13 +66,6 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 			return
 		}
 
-		log.Debug("User found",
-			zap.String("client_ip", clientIP),
-			zap.String("user_agent", r.UserAgent()),
-			zap.String("username", username),
-			zap.String("role", user.Role.String()),
-		)
-
 		if user == nil {
 			log.Debug("User not found",
 				zap.String("client_ip", clientIP),
@@ -81,6 +75,14 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 			response.Unauthorized(w, r)
 			return
 		}
+
+		log.Debug("User found",
+			zap.String("client_ip", clientIP),
+			zap.String("user_agent", r.UserAgent()),
+			zap.String("username", username),
+			zap.String("role", user.Role.String()),
+		)
+
 		if user.RowStatus == model.Archived {
 			log.Debug("User is archived",
 				zap.String("client_ip", clientIP),
@@ -105,7 +107,8 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 
 		// Set user context
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, request.UserIDContextKey, user.ID)
+		// Must use string to store in context
+		ctx = context.WithValue(ctx, request.UserIDContextKey, strconv.Itoa(int(user.ID)))
 		ctx = context.WithValue(ctx, request.UserNameContextKey, user.Username)
 		ctx = context.WithValue(ctx, request.UserRolesContextKey, user.Role.String())
 
