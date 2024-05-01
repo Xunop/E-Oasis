@@ -18,6 +18,10 @@ func createEpub(n string) error {
 	// Set the author
 	e.SetAuthor("Test author")
 
+	// Set the identifier to an ISBN
+	e.SetIdentifier("urn:isbn:9780101010101")
+	// e.SetIdentifier("urn:uuid:12345678-1234-1234-1234-123456789012")
+
 	// Add a section
 	// section1Body := `<h1>Section 1</h1>
 	//    <p>This is a paragraph.</p>`
@@ -44,6 +48,8 @@ func TestEpub(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		t.Logf("Opened book: %s", f)
+		// t.Logf("Epub book: %+v", b)
 		defer b.Close()
 		fn(b)
 		os.Remove(f)
@@ -82,14 +88,28 @@ func TestEpub(t *testing.T) {
 		})
 	})
 
-    t.Run("TestBookMetadata", func(t *testing.T) {
-        withBook("test.epub", func(b *Book) {
-            if b.Opf.Metadata.Title[0] != "Test title" {
-                t.Errorf("expected title 'Test title', got '%s'", b.Opf.Metadata.Title[0])
-            }
-            if b.Opf.Metadata.Creator[0].Data != "Test author" {
-                t.Errorf("expected author 'Test author', got '%s'", b.Opf.Metadata.Creator[0].Data)
-            }
-        })
-    })
+	t.Run("TestGetAuthor", func(t *testing.T) {
+		withBook("test.epub", func(b *Book) {
+			if b.GetAuthor() != "Test author" {
+				t.Errorf("expected author 'Test author', got '%s'", b.GetAuthor())
+			}
+		})
+	})
+
+	t.Run("TestGetTitle", func(t *testing.T) {
+		withBook("test.epub", func(b *Book) {
+			if b.GetTitle() != "Test title" {
+				t.Errorf("expected title 'Test title', got '%s'", b.GetTitle())
+			}
+		})
+	})
+
+	t.Run("TestGetIdentifier", func(t *testing.T) {
+		withBook("test.epub", func(b *Book) {
+			identifier := b.GetISBN()
+			if identifier != "urn:isbn:9780101010101" {
+				t.Errorf("expected ISBN 'urn:isbn:9780101010101', got '%s'", identifier)
+			}
+		})
+	})
 }

@@ -71,3 +71,67 @@ func (p *Book) open(n string) (io.ReadCloser, error) {
 	}
 	return nil, fmt.Errorf("file not found: %s", n)
 }
+
+func (p *Book) GetTitle() string {
+	return p.Opf.Metadata.Title[0]
+}
+
+func (p *Book) GetAuthor() string {
+	for _, author := range p.Opf.Metadata.Creator {
+		if author.Role == "aut" {
+			return author.Data
+		} else if author.Role == "" {
+			return author.Data
+		}
+	}
+	return ""
+}
+
+func (p *Book) GetLanguage() string {
+	return p.Opf.Metadata.Language[0]
+}
+
+func (p *Book) GetDescription() string {
+	return p.Opf.Metadata.Description[0]
+}
+
+func (p *Book) GetPublisher() string {
+	return p.Opf.Metadata.Publisher[0]
+}
+
+func (p *Book) GetISBN() string {
+	for _, identifier := range p.Opf.Metadata.Identifier {
+		if identifier.Scheme == "ISBN" {
+			return identifier.Data
+		} else if identifier.Scheme == "" {
+			return identifier.Data // Fallback to default
+		}
+	}
+	return ""
+}
+
+func (p *Book) GetUUID() string {
+	for _, identifier := range p.Opf.Metadata.Identifier {
+		if identifier.Scheme == "UUID" {
+			return identifier.Data
+		} else if identifier.Scheme == "" {
+			return identifier.Data // Fallback to default
+		}
+	}
+	return ""
+}
+
+// GetCover returns the path to the cover image
+func (p *Book) GetCover() string {
+	for _, meta := range p.Opf.Metadata.Meta {
+		if meta.Name == "cover" {
+			filename := meta.Content
+			return p.filename(filename)
+		}
+	}
+	return ""
+}
+
+func (p *Book) GetDate() string {
+	return p.Opf.Metadata.Date[0].Data
+}
