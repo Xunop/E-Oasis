@@ -47,7 +47,7 @@ func TestLogRotation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if fileInfo.Size() > int64(oneMegabyte) {
-		t.Fatalf("File size %d is greater than expected %d", fileInfo.Size(), oneMegabyte)
+		t.Errorf("File size %d is greater than expected %d", fileInfo.Size(), oneMegabyte)
 	}
 	// Get all file in dir
 	files, err := os.ReadDir(dir)
@@ -57,6 +57,6 @@ func TestLogRotation(t *testing.T) {
 	t.Logf("Files in dir: %s", files[0].Name())
 	t.Logf("Files in dir: %s", files[1].Name())
 	if len(files) != 2 {
-		t.Fatalf("Expected 2 files in dir, got %d", len(files))
+		t.Errorf("Expected 2 files in dir, got %d", len(files))
 	}
 }

@@ -52,10 +52,10 @@ func TestEpub(t *testing.T) {
 	t.Run("TestOpen", func(t *testing.T) {
 		withBook("test.epub", func(b *Book) {
 			if b.Mimetype != "application/epub+zip" {
-				t.Fatalf("invalid mimetype: %s", b.Mimetype)
+				t.Errorf("invalid mimetype: %s", b.Mimetype)
 			}
 			if b.Container.Rootfile.Fullpath != "EPUB/package.opf" {
-				t.Fatalf("invalid rootfile: %s", b.Container.Rootfile.Fullpath)
+				t.Errorf("invalid rootfile: %s", b.Container.Rootfile.Fullpath)
 			}
 		})
 	})
@@ -64,7 +64,7 @@ func TestEpub(t *testing.T) {
 		withBook("test.epub", func(b *Book) {
 			files := b.Files()
 			if len(files) != 5 {
-				t.Fatalf("expected 5 files, got %d", len(files))
+				t.Errorf("expected 5 files, got %d", len(files))
 			}
 		})
 	})
@@ -74,10 +74,10 @@ func TestEpub(t *testing.T) {
 			var opf Opf
 			err := b.readXML(b.Container.Rootfile.Fullpath, &opf)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("failed to read XML: %v", err)
 			}
 			if len(opf.Manifest) != 2 {
-				t.Fatalf("expected 2 manifest items, got %d", len(opf.Manifest))
+				t.Errorf("expected 2 manifest items, got %d", len(opf.Manifest))
 			}
 		})
 	})
@@ -85,10 +85,10 @@ func TestEpub(t *testing.T) {
     t.Run("TestBookMetadata", func(t *testing.T) {
         withBook("test.epub", func(b *Book) {
             if b.Opf.Metadata.Title[0] != "Test title" {
-                t.Fatalf("expected title 'Test title', got '%s'", b.Opf.Metadata.Title[0])
+                t.Errorf("expected title 'Test title', got '%s'", b.Opf.Metadata.Title[0])
             }
             if b.Opf.Metadata.Creator[0].Data != "Test author" {
-                t.Fatalf("expected author 'Test author', got '%s'", b.Opf.Metadata.Creator[0].Data)
+                t.Errorf("expected author 'Test author', got '%s'", b.Opf.Metadata.Creator[0].Data)
             }
         })
     })

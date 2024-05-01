@@ -103,7 +103,7 @@ func TestGetBasicSystemSetting(t *testing.T) {
 	basic, err := s.GetSystemBasicSetting()
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
-			t.Fatalf("Failed to get system setting: %v", err)
+			t.Errorf("Failed to get system setting: %v", err)
 		}
 	}
 	t.Logf("Basic system setting: %v", basic)
@@ -118,7 +118,7 @@ func TestGetGeneralSystemSetting(t *testing.T) {
 	general, err := s.GetSystemGeneralSetting()
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
-			t.Fatalf("Failed to get system setting: %v", err)
+			t.Errorf("Failed to get system setting: %v", err)
 		}
 	}
 	t.Logf("General system setting: %v", general)
