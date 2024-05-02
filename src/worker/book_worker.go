@@ -6,16 +6,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
 	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/util"
-	"github.com/Xunop/e-oasis/util/parsers/epub"
 	"go.uber.org/zap"
 )
 
@@ -184,44 +179,23 @@ func (w *BookParseWorker) Run() {
 			zap.Int("work_id", w.id),
 			zap.String("path", path))
 
-		book, err := epub.Open(path)
+		bookMeta, err := parseBook(path)
 		if err != nil {
-			log.Error("Error opening epub", zap.Error(err))
+			log.Error("Parse book error", zap.String("Book", path), zap.Error(err))
 			continue
 		}
-		defer book.Close()
-
-		// Get the book metadata(title, author, etc)
-		bookTitle := book.GetTitle()
-		bookAuthor := book.GetAuthor()
-		hasCover := false
-		// Book cover always in book directory, but don't know the extension of the cover(jpg/png?)
-		bookCover, err := book.GetCover(filepath.Dir(path))
-		if bookCover != "" && err != nil {
-			hasCover = true
-		}
-		bookUUID := book.GetUUID()
-		bookISBN := book.GetISBN()
-		bookDate := book.GetDate()
-		bookPublisher := book.GetPublisher()
-		// bookLanguage := book.GetLanguage()
-
-		log.Debug("Book parse worker:", zap.String("Book title", bookTitle), zap.String("Book author", bookAuthor))
-		sortTitle := util.TitleSort(bookTitle)
-		sortAuthor := util.GetSortedAuthor(bookAuthor)
-		log.Debug("Book title: %s, Book author: %s", zap.String("title", sortTitle), zap.String("author", sortAuthor))
 
 		// Save the book metadata
 		newBook := &model.Book{
-			Title:        bookTitle,
-			SortTitle:    sortTitle,
-			PublishDate:  bookDate,
-			AuthorSort:   sortAuthor,
-			ISBN:         bookISBN,
-			Path:         path,
-			UUID:         bookUUID,
-			HasCover:     hasCover,
-			LastModified: time.Now().String(),
+			Title:        bookMeta.Book.Title,
+			SortTitle:    bookMeta.Book.SortTitle,
+			PublishDate:  bookMeta.Book.PublishDate,
+			AuthorSort:   bookMeta.Book.AuthorSort,
+			ISBN:         bookMeta.Book.ISBN,
+			Path:         bookMeta.Book.Path,
+			UUID:         bookMeta.Book.UUID,
+			HasCover:     bookMeta.Book.HasCover,
+			LastModified: bookMeta.Book.LastModified,
 		}
 
 		returnBook, err := w.store.AddBook(newBook)
@@ -234,13 +208,9 @@ func (w *BookParseWorker) Run() {
 		// w.store.AddBookAuthorLink(&model.BookAuthorLink{BookID: returnBook.ID, AuthorID: 1})
 
 		// TODO: Handler return publisher
-		bookPublisher = strings.TrimSpace(bookPublisher)
-		if bookPublisher == "" {
-			bookPublisher = "Unknown"
-		}
-		_, err = w.store.AddPublisher(&model.Publisher{Name: bookPublisher})
+		_, err = w.store.AddPublisher(bookMeta.Publisher)
 		if err != nil {
-			log.Error("Error add publisher", zap.String("publisher", bookPublisher), zap.Error(err))
+			log.Error("Error add publisher", zap.String("publisher", bookMeta.Publisher.Name), zap.Error(err))
 			continue
 		}
 

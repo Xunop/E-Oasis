@@ -47,6 +47,12 @@ type Language struct {
 	LangCode string `json:"lang_code"`
 }
 
+type BookMeta struct {
+	Book      *Book      `json:"book"`
+	Publisher *Publisher `json:"publisher"`
+	Language  *Language  `json:"language"`
+}
+
 type BookAuthorLink struct {
 	ID       int `json:"id"`
 	BookID   int `json:"book"`
