@@ -3,6 +3,7 @@ package epub
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	epub2 "github.com/go-shiori/go-epub"
@@ -39,7 +40,7 @@ func createEpub(n string) error {
 }
 
 func TestEpub(t *testing.T) {
-	withBook := func(f string, fn func(*Book)) {
+	withNewBook := func(f string, fn func(*Book)) {
 		err := createEpub(f)
 		if err != nil {
 			t.Fatal(err)
@@ -48,15 +49,24 @@ func TestEpub(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer b.Close()
 		t.Logf("Opened book: %s", f)
 		// t.Logf("Epub book: %+v", b)
-		defer b.Close()
 		fn(b)
 		os.Remove(f)
 	}
+	withLocalBook := func(f string, fn func(*Book)) {
+		b, err := Open(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer b.Close()
+		t.Logf("Opened book: %s", f)
+		fn(b)
+	}
 
 	t.Run("TestOpen", func(t *testing.T) {
-		withBook("test.epub", func(b *Book) {
+		withNewBook("test.epub", func(b *Book) {
 			if b.Mimetype != "application/epub+zip" {
 				t.Errorf("invalid mimetype: %s", b.Mimetype)
 			}
@@ -67,7 +77,7 @@ func TestEpub(t *testing.T) {
 	})
 
 	t.Run("TestFiles", func(t *testing.T) {
-		withBook("test.epub", func(b *Book) {
+		withNewBook("test.epub", func(b *Book) {
 			files := b.Files()
 			if len(files) != 5 {
 				t.Errorf("expected 5 files, got %d", len(files))
@@ -76,7 +86,7 @@ func TestEpub(t *testing.T) {
 	})
 
 	t.Run("TestReadXML", func(t *testing.T) {
-		withBook("test.epub", func(b *Book) {
+		withNewBook("test.epub", func(b *Book) {
 			var opf Opf
 			err := b.readXML(b.Container.Rootfile.Fullpath, &opf)
 			if err != nil {
@@ -89,7 +99,7 @@ func TestEpub(t *testing.T) {
 	})
 
 	t.Run("TestGetAuthor", func(t *testing.T) {
-		withBook("test.epub", func(b *Book) {
+		withNewBook("test.epub", func(b *Book) {
 			if b.GetAuthor() != "Test author" {
 				t.Errorf("expected author 'Test author', got '%s'", b.GetAuthor())
 			}
@@ -97,7 +107,7 @@ func TestEpub(t *testing.T) {
 	})
 
 	t.Run("TestGetTitle", func(t *testing.T) {
-		withBook("test.epub", func(b *Book) {
+		withNewBook("test.epub", func(b *Book) {
 			if b.GetTitle() != "Test title" {
 				t.Errorf("expected title 'Test title', got '%s'", b.GetTitle())
 			}
@@ -105,11 +115,24 @@ func TestEpub(t *testing.T) {
 	})
 
 	t.Run("TestGetIdentifier", func(t *testing.T) {
-		withBook("test.epub", func(b *Book) {
+		withNewBook("test.epub", func(b *Book) {
 			identifier := b.GetISBN()
 			if identifier != "urn:isbn:9780101010101" {
 				t.Errorf("expected ISBN 'urn:isbn:9780101010101', got '%s'", identifier)
 			}
+		})
+	})
+
+	// TODO: Just run in myself desktop
+	localBookName := "/home/xun/Workspace/hv_reader/e-oasis/src/util/parsers/epub/温柔的夜(三毛).epub"
+	t.Run("TestGetCoverFromLocalBook", func(t *testing.T) {
+		withLocalBook(localBookName, func(b *Book) {
+			destDir := filepath.Dir(localBookName)
+			coverPath, err := b.GetCover(destDir)
+			if err != nil {
+				t.Errorf("Error get cover from %s, err: %v", localBookName, err)
+			}
+			t.Logf("Cover image: %s", coverPath)
 		})
 	})
 }
