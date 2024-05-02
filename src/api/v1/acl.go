@@ -131,7 +131,7 @@ func (m *AuthInterceptor) authenticate(ctx context.Context, accessToken string) 
 		return []byte(m.secret), nil
 	})
 	if err != nil {
-		return "", errors.New("Invalid or expired access token")
+		return "", errors.Wrap(err, "invalid or expired access token")
 	}
 
 	// Have valid token or generate new token

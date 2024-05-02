@@ -172,7 +172,7 @@ func (s *Store) GetOrUpsetSystemSecuritySetting() (*model.SystemSettingSecurity,
 
 	if modified {
 		log.Debug("Start creating security setting")
-		securitySetting := &model.SystemSettingSecurity{
+		securitySetting = &model.SystemSettingSecurity{
 			JWTSecret: util.GenUUID(),
 		}
 		_, err := s.UpsetSystemSetting(&model.SystemSetting{
