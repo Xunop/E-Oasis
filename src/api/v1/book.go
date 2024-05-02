@@ -48,6 +48,7 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 
 	files := r.MultipartForm.File["file"]
 
+	jobs := make([]model.Job, 0)
 	for _, file := range files {
 		// if file.Size > config.Opts.MaxUploadSize<<20 {
 		// 	err := errors.New("File size exceeded")
@@ -72,9 +73,9 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 			Item:   file,
 		}
 		go h.uploadPool.Push(job)
-
-		response.OK(w, r, job)
+		jobs = append(jobs, job)
 	}
+	response.OK(w, r, jobs)
 }
 
 // parseBook is a helper function to parse the book format

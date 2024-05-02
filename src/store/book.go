@@ -123,10 +123,13 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 	args = append(args, book.HasCover)
 	args = append(args, book.LastModified)
 
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
 	tx, err := s.metaDb.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
@@ -153,6 +156,14 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 }
 
 func (s *Store) AddPublisher(publisher *model.Publisher) (*model.Publisher, error) {
+	exists, err := s.CheckPublisher(publisher.Name)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return publisher, nil
+	}
+
 	stmt := `
         INSERT INTO publishers (
             name,
@@ -164,10 +175,13 @@ func (s *Store) AddPublisher(publisher *model.Publisher) (*model.Publisher, erro
 	args = append(args, publisher.Name)
 	args = append(args, publisher.Sort)
 
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
 	tx, err := s.metaDb.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
@@ -195,10 +209,13 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 
 	args = append(args, code)
 
-	tx, err := s.db.Begin()
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
+	tx, err := s.appDb.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
@@ -208,4 +225,31 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 		return nil, err
 	}
 	return &newLanguage, nil
+}
+
+func (s *Store) CheckBook(title string) (bool, error) {
+	stmt := `
+		SELECT EXISTS(SELECT 1 FROM books WHERE title = ?)
+	`
+	args := []any{title}
+
+	var exists bool
+	if err := s.metaDb.QueryRow(stmt, args...).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (s *Store) CheckPublisher(name string) (bool, error) {
+	name = strings.TrimSpace(name)
+	stmt := `
+		SELECT EXISTS(SELECT 1 FROM publishers WHERE name = ?)
+	`
+	args := []any{name}
+
+	var exists bool
+	if err := s.metaDb.QueryRow(stmt, args...).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
 }

@@ -89,7 +89,7 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", query, args))
 
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.appDb.Query(query, args...)
 	if err != nil {
 		log.Debug("Error querying users", zap.Error(err))
 		return nil, err
@@ -129,7 +129,7 @@ func (s *Store) ListUsers(find *model.FindUser) ([]*model.User, error) {
 
 func (s *Store) SetLastLogin(userID int32) error {
 	query := `UPDATE user SET last_login_ts=now() WHERE id=$1`
-	_, err := s.db.Exec(query, userID)
+	_, err := s.appDb.Exec(query, userID)
 	if err != nil {
 		errors.Wrap(err, "store: unable to update last login date")
 	}
@@ -145,10 +145,11 @@ func (s *Store) CreateUser(create *model.User) (*model.User, error) {
 	// log.Debug("CreateUser", zap.String("stmt", stmt), zap.Any("args", args))
 	log.Fallback("Debug", fmt.Sprintf("CreateUser\nstmt: %s\nargs: %s\n", stmt, args))
 
-	tx, err := s.db.Begin()
+	tx, err := s.appDb.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
 
 	var user model.User
 	if err := tx.QueryRow(stmt, args...).Scan(
@@ -165,7 +166,6 @@ func (s *Store) CreateUser(create *model.User) (*model.User, error) {
 		&user.AvatarURL,
 		&user.Description,
 	); err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 

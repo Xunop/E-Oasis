@@ -21,7 +21,7 @@ func (s *Store) GetSystemSetting(name string) (*model.SystemSetting, error) {
 	stmt := `
     SELECT * FROM system_setting WHERE name = ?
 	`
-	if err := s.db.QueryRow(stmt, name).Scan(&setting.Name, &setting.Value, &setting.Description); err != nil {
+	if err := s.appDb.QueryRow(stmt, name).Scan(&setting.Name, &setting.Value, &setting.Description); err != nil {
 		return nil, errors.Wrap(err, "failed to get system setting")
 	}
 
@@ -132,7 +132,7 @@ func (s *Store) UpsetSystemSetting(setting *model.SystemSetting) (*model.SystemS
 		value = EXCLUDED.value,
 		description = EXCLUDED.description
 	`
-	if _, err := s.db.Exec(stmt, newSetting.Name, newSetting.Value, newSetting.Description); err != nil {
+	if _, err := s.appDb.Exec(stmt, newSetting.Name, newSetting.Value, newSetting.Description); err != nil {
 		return nil, errors.Wrap(err, "failed to insert/update system setting")
 	}
 	s.SystemSettingCache.Store(newSetting.Name, newSetting)

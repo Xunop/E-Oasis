@@ -119,6 +119,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 			continue
 		}
 
+	    w.store.JobCache.Store(j.ID, &j)
 		// Next Parse the book
 		jobDone <- job.Path
 
@@ -201,7 +202,7 @@ func (w *BookParseWorker) Run() {
 		log.Debug("Book parse worker:", zap.String("Book title", bookTitle), zap.String("Book author", bookAuthor))
 		sortTitle := util.TitleSort(bookTitle)
 		sortAuthor := util.GetSortedAuthor(bookAuthor)
-		// log.Debug("Book title: %s, Book author: %s", zap.String("title", sortTitle), zap.String("author", sortAuthor))
+		log.Debug("Book title: %s, Book author: %s", zap.String("title", sortTitle), zap.String("author", sortAuthor))
 
 		// Save the book metadata
 		newBook := &model.Book{

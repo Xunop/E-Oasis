@@ -21,7 +21,7 @@ func (s *Store) UpsertUserSetting(userSetting *model.UserSetting) (*model.UserSe
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("SetUserSetting query: %s\nargs:\nUserID:%d\nKey:%s\n", query, userSetting.UserID, userSetting.Key.String()))
 
-	_, err := s.db.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value)
+	_, err := s.appDb.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (s *Store) ListUserSettings(find *model.FindUserSetting) ([]*model.UserSett
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", query, args))
 
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.appDb.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
