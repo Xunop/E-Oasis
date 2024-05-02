@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Xunop/e-oasis/config"
@@ -119,7 +120,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 			continue
 		}
 
-	    w.store.JobCache.Store(j.ID, &j)
+		w.store.JobCache.Store(j.ID, &j)
 		// Next Parse the book
 		jobDone <- job.Path
 
@@ -206,9 +207,9 @@ func (w *BookParseWorker) Run() {
 
 		// Save the book metadata
 		newBook := &model.Book{
-			Title: bookTitle,
+			Title:        bookTitle,
 			SortTitle:    sortTitle,
-			PublishDate: bookDate,
+			PublishDate:  bookDate,
 			AuthorSort:   sortAuthor,
 			ISBN:         bookISBN,
 			Path:         path,
@@ -227,9 +228,13 @@ func (w *BookParseWorker) Run() {
 		// w.store.AddBookAuthorLink(&model.BookAuthorLink{BookID: returnBook.ID, AuthorID: 1})
 
 		// TODO: Handler return publisher
+		bookPublisher = strings.TrimSpace(bookPublisher)
+		if bookPublisher == "" {
+			bookPublisher = "Unknown"
+		}
 		_, err = w.store.AddPublisher(&model.Publisher{Name: bookPublisher})
 		if err != nil {
-			log.Error("Error add publisher", zap.Error(err))
+			log.Error("Error add publisher", zap.String("publisher", bookPublisher), zap.Error(err))
 			continue
 		}
 

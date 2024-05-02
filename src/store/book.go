@@ -241,7 +241,6 @@ func (s *Store) CheckBook(title string) (bool, error) {
 }
 
 func (s *Store) CheckPublisher(name string) (bool, error) {
-	name = strings.TrimSpace(name)
 	stmt := `
 		SELECT EXISTS(SELECT 1 FROM publishers WHERE name = ?)
 	`
