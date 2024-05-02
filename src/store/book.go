@@ -105,12 +105,13 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
             pubdate,
             author_sort,
             isbn,
+            lccn,
             path,
             uuid,
             has_cover,
             last_modified
-        ) VALUES (?,?,?,?,?,?,?,?,?)
-        RETURNING id, title, sort, pubdate, author_sort, isbn, path, uuid, has_cover, last_modified`
+        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+        RETURNING id, title, sort, pubdate, author_sort, isbn, lccn, path, uuid, has_cover, last_modified`
 	args := []any{}
 
 	args = append(args, book.Title)
@@ -118,6 +119,7 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 	args = append(args, book.PublishDate)
 	args = append(args, book.AuthorSort)
 	args = append(args, book.ISBN)
+	args = append(args, book.LCCN)
 	args = append(args, book.Path)
 	args = append(args, book.UUID)
 	args = append(args, book.HasCover)
@@ -142,6 +144,7 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 		&newBook.PublishDate,
 		&newBook.AuthorSort,
 		&newBook.ISBN,
+		&newBook.LCCN,
 		&newBook.Path,
 		&newBook.UUID,
 		&newBook.HasCover,
