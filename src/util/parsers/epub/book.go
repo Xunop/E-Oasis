@@ -73,7 +73,10 @@ func (p *Book) open(n string) (io.ReadCloser, error) {
 }
 
 func (p *Book) GetTitle() string {
-	return p.Opf.Metadata.Title[0]
+	if p.Opf.Metadata.Title != nil {
+		return p.Opf.Metadata.Title[0]
+	}
+	return ""
 }
 
 func (p *Book) GetAuthor() string {
@@ -88,15 +91,24 @@ func (p *Book) GetAuthor() string {
 }
 
 func (p *Book) GetLanguage() string {
-	return p.Opf.Metadata.Language[0]
+	if p.Opf.Metadata.Language != nil {
+	    return p.Opf.Metadata.Language[0]
+	}
+	return ""
 }
 
 func (p *Book) GetDescription() string {
-	return p.Opf.Metadata.Description[0]
+	if p.Opf.Metadata.Description != nil {
+		return p.Opf.Metadata.Description[0]
+	}
+	return ""
 }
 
 func (p *Book) GetPublisher() string {
-	return p.Opf.Metadata.Publisher[0]
+	if p.Opf.Metadata.Publisher != nil {
+        return p.Opf.Metadata.Publisher[0]
+    }
+    return ""
 }
 
 func (p *Book) GetISBN() string {
@@ -133,5 +145,8 @@ func (p *Book) GetCover() string {
 }
 
 func (p *Book) GetDate() string {
-	return p.Opf.Metadata.Date[0].Data
+	if p.Opf.Metadata.Date != nil {
+	    return p.Opf.Metadata.Date[0].Data
+	}
+	return ""
 }
