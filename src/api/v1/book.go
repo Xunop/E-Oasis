@@ -3,7 +3,9 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/http/request"
@@ -63,8 +65,12 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 			log.Error("Filed to get user ID", zap.Error(err))
 			response.BadRequest(w, r, err)
 		}
-		bookPath := fmt.Sprintf("%s/%d/%s", config.Opts.Data, uid, file.Filename)
-		bookPath = util.GenerateNewFileName(bookPath)
+
+		fileBase := filepath.Base(file.Filename)
+		ext := filepath.Ext(fileBase)
+		bookFileName := strings.TrimSuffix(fileBase, ext)
+		bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookFileName)
+		bookPath = util.GenerateNewDirName(bookPath)
 		job := model.Job{
 			UserID: uid,
 			Path:   bookPath,

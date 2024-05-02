@@ -65,7 +65,7 @@ func RandomString(n int) (string, error) {
 	return sb.String(), nil
 }
 
-// generateNewFileName is a helper function to generate a new file name
+// GenerateNewFileName is a helper function to generate a new file name
 func GenerateNewFileName(filePath string) string {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return filePath // file does not exist, return the same name
@@ -93,5 +93,35 @@ func GenerateNewFileName(filePath string) string {
 		}
 	}
 	newFileName := fmt.Sprintf("%s_%d%s", fileName, index, ext)
+	return filepath.Join(dir, newFileName)
+}
+
+// GenerateNewDir is a helper function to generate a new dir name
+// If dir exist, return dir_1/dir_2
+func GenerateNewDirName(filePath string) string {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return filePath
+	}
+
+	dir := filepath.Dir(filePath)
+	base := filepath.Base(filePath)
+
+	existingDirs, err := filepath.Glob(filepath.Join(dir, base+"_*[0-9]"))
+	if err != nil {
+		return filePath
+	}
+
+	index := 1
+	for _, existingDir := range existingDirs {
+		existingBase := filepath.Base(existingDir)
+		// existingName := strings.TrimSuffix(existingBase, ext)
+		var existingIndex int
+		base = strings.Split(existingBase, "_")[0]
+		existingIndex, err = strconv.Atoi(strings.Split(existingBase, "_")[1])
+		if err == nil && existingIndex >= index {
+			index = existingIndex + 1
+		}
+	}
+	newFileName := fmt.Sprintf("%s_%d", base, index)
 	return filepath.Join(dir, newFileName)
 }

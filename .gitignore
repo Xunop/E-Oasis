@@ -1,4 +1,5 @@
 sample-db
 *.log
 *.db
+*.epub
 e-oasis

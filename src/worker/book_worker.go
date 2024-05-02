@@ -1,6 +1,7 @@
 package worker // import "github.com/Xunop/e-oasis/worker"
 
 import (
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -96,11 +97,12 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		}
 
 		// Check if the user has a folder
-		if _, err := os.Stat(filepath.Dir(job.Path)); os.IsNotExist(err) {
-			err = os.MkdirAll(filepath.Dir(job.Path), os.ModePerm)
+		if _, err := os.Stat(job.Path); os.IsNotExist(err) {
+			err = os.MkdirAll(job.Path, os.ModePerm)
 		}
 
-		f, err := os.Create(job.Path)
+		filePath := fmt.Sprintf("%s/%s", job.Path, job.Item.(*multipart.FileHeader).Filename)
+		f, err := os.Create(filePath)
 		if err != nil {
 			log.Error("Error creating file", zap.Error(err))
 			continue
@@ -122,7 +124,8 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 
 		w.store.JobCache.Store(j.ID, &j)
 		// Next Parse the book
-		jobDone <- job.Path
+		// File path is the path of the book: /path/to/book/book.epub
+		jobDone <- filePath
 
 		log.Debug("File uploaded successfully",
 			zap.String("file_name", fileHeader.Filename),
@@ -170,6 +173,7 @@ type BookParseWorker struct {
 
 // TODO: Sqlite is in single thread mode, so we can't use multiple thread to insert data
 // Can add a pool to handle the insert
+// Now use lock to handle the insert
 func (w *BookParseWorker) Run() {
 	log.Debug("BookParseWorker is running", zap.Int("worker_id", w.id))
 
@@ -185,13 +189,15 @@ func (w *BookParseWorker) Run() {
 			log.Error("Error opening epub", zap.Error(err))
 			continue
 		}
+		defer book.Close()
 
 		// Get the book metadata(title, author, etc)
 		bookTitle := book.GetTitle()
 		bookAuthor := book.GetAuthor()
-		bookCover := book.GetCover()
 		hasCover := false
-		if bookCover != "" {
+		// Book cover always in book directory, but don't know the extension of the cover(jpg/png?)
+		bookCover, err := book.GetCover(filepath.Dir(path))
+		if bookCover != "" && err != nil {
 			hasCover = true
 		}
 		bookUUID := book.GetUUID()
