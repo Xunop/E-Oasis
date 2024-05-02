@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -16,8 +17,8 @@ import (
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/version"
 	"github.com/Xunop/e-oasis/util"
+	"github.com/Xunop/e-oasis/version"
 )
 
 type DB struct {
@@ -41,6 +42,27 @@ func init() {
 			return util.NewConcatenate(","), nil
 		},
 	})
+	sqlite.MustRegisterDeterministicScalarFunction(
+		"title_sort",
+		1,
+		func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			return util.TitleSort(args[0].(string)), nil
+		},
+	)
+	sqlite.MustRegisterDeterministicScalarFunction(
+	    "uuid4",
+	    0,
+	    func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+            return util.UUID4()
+	    },
+	)
+	sqlite.MustRegisterDeterministicScalarFunction(
+		"books_list_filter",
+		1,
+		func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			return 1, nil
+		},
+	)
 }
 
 func NewDB(path, name string) (*DB, error) {
@@ -48,7 +70,21 @@ func NewDB(path, name string) (*DB, error) {
 		return nil, errors.New("Database URL is required")
 	}
 
-	d, err := sql.Open("sqlite", path)
+	// Connect to the database with some sane settings:
+	// - No shared-cache: it's obsolete; WAL journal mode is a better solution.
+	// - No foreign key constraints: it's currently disabled by default, but it's a
+	// good practice to be explicit and prevent future surprises on SQLite upgrades.
+	// - Journal mode set to WAL: it's the recommended journal mode for most applications
+	// as it prevents locking issues.
+	//
+	// Notes:
+	// - When using the `modernc.org/sqlite` driver, each pragma must be prefixed with `_pragma=`.
+	//
+	// References:
+	// - https://pkg.go.dev/modernc.org/sqlite#Driver.Open
+	// - https://www.sqlite.org/sharedcache.html
+	// - https://www.sqlite.org/pragma.html
+	d, err := sql.Open("sqlite", path + "?_pragma=foreign_keys(0)&_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		return nil, err
 	}

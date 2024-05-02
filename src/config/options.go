@@ -2,7 +2,7 @@ package config
 
 const (
 	defalutLogFile                = "logs.log"
-	defaultLogLevel               = "info"
+	defaultLogLevel               = "debug"
 	defaultLogFileMaxSize         = 20
 	defaultLogFileMaxBackups      = 3
 	defaultLogFileMaxAge          = 28
@@ -11,13 +11,15 @@ const (
 	defaultHost                   = "0.0.0.0"
 	defaultData                   = "/var/opt/e-oasis"
 	defaultDSN                    = defaultData + "/e-oasis.db"
-	defaultMetaDSN				  = defaultData + "/metadata.db"
+	defaultMetaDSN                = defaultData + "/metadata.db"
 	defaultMetricsCollector       = false
 	defaultMetricsRefreshInterval = 15
 	defaultMetricsAllowedNetworks = "127.0.0.1/8"
 	defaultMetricsUsername        = ""
 	defaultMetricsPassword        = ""
 	defaultWorkerPoolSize         = 10
+	defaultMaxUploadSize          = 100
+	defaultSupportedTypes         = "application/zip"
 )
 
 type Option struct {
@@ -40,9 +42,9 @@ type Options struct {
 	LogFileMaxAge int `mapstructure:"log_file_max_age"`
 	// LogCompress is whether or not to compress the log files
 	LogCompress bool `mapstructure:"log_compress"`
-	// databaseURL is the URL of the database to connect to(sqlite)
+	// databaseURL is the URL of the database to connect to (sqlite)
 	DSN string `mapstructure:"dsn_uri"`
-	// metaDSN is the URL of the calibre database to connect to(sqlite)
+	// metaDSN is the URL of the calibre database to connect to (sqlite)
 	MetaDSN string `mapstructure:"meta_dsn_uri"`
 	// port is the port to listen on
 	Port int `mapstructure:"port"`
@@ -51,6 +53,10 @@ type Options struct {
 	// data is the directory to store data
 	Data           string `mapstructure:"data"`
 	WorkerPoolSize int    `mapstructure:"worker_pool_size"`
+	// MaxUploadSize is the maximum size of the upload, in MiB
+	MaxUploadSize int64 `mapstructure:"max_upload_size"`
+	// SupportedTypes is the supported types of books
+	SupportedTypes []string `mapstructure:"supported_types"`
 	// For metrics
 	MetricsCollector       bool     `mapstructure:"metrics_collector"`
 	MetricsRefreshInterval int      `mapstructure:"metrics_refresh_interval"`
@@ -73,6 +79,7 @@ func GetDefaultOptions() *Options {
 		Host:                   defaultHost,
 		Data:                   defaultData,
 		WorkerPoolSize:         defaultWorkerPoolSize,
+		SupportedTypes:         []string{defaultSupportedTypes},
 		MetricsCollector:       defaultMetricsCollector,
 		MetricsRefreshInterval: defaultMetricsRefreshInterval,
 		MetricsAllowedNetworks: []string{defaultMetricsAllowedNetworks},

@@ -16,12 +16,12 @@ import (
 )
 
 // StartServer starts the HTTP server
-func StartServer(ctx context.Context, store *store.Store, pool *worker.Pool) (*http.Server, error) {
+func StartServer(ctx context.Context, store *store.Store, pools... worker.WorkPool) (*http.Server, error) {
 	addr := config.Opts.Host
 	port := config.Opts.Port
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", addr, port),
-		Handler: setupHandler(store, pool),
+		Handler: setupHandler(store, pools[0], pools[1]),
 	}
 
 	startHTTPServer(server)
@@ -39,12 +39,12 @@ func startHTTPServer(server *http.Server) {
 	}()
 }
 
-func setupHandler(store *store.Store, pool *worker.Pool) http.Handler {
+func setupHandler(store *store.Store, pools... worker.WorkPool) http.Handler {
 	router := mux.NewRouter()
 
 	// TODO: Add other routes
 	// Setup the API routes
-	v1.Server(router, store, pool)
+	v1.Server(router, store, pools[0], pools[1])
 
 	router.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		if err := store.Ping(); err != nil {

@@ -19,7 +19,7 @@ func (s *Store) UpsertUserSetting(userSetting *model.UserSetting) (*model.UserSe
 
 	// log.Debug("SetUserSetting", zap.String("query", query), zap.Any("args", userSetting))
 	log.Debug("SQL query and args:")
-	log.Fallback("Debug", fmt.Sprintf("SetUserSetting query: %s\nargs:\nUserID:%d\nKey:%s\nValue:%s\n", query, userSetting.UserID, userSetting.Key.String(), userSetting.Value))
+	log.Fallback("Debug", fmt.Sprintf("SetUserSetting query: %s\nargs:\nUserID:%d\nKey:%s\n", query, userSetting.UserID, userSetting.Key.String()))
 
 	_, err := s.db.Exec(query, userSetting.UserID, userSetting.Key.String(), userSetting.Value)
 	if err != nil {

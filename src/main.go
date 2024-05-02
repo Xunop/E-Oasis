@@ -78,10 +78,12 @@ var (
 				return
 			}
 
-			pool := worker.NewPool(store, config.Opts.WorkerPoolSize)
+			uploadPool := worker.NewUploadPool(store, config.Opts.WorkerPoolSize)
+			parsePool := worker.NewParsePool(store, config.Opts.WorkerPoolSize)
+
 
 			// Start Server
-			s, err := server.StartServer(ctx, store, pool)
+			s, err := server.StartServer(ctx, store, uploadPool, parsePool)
 			if err != nil {
 				cancle()
 				fmt.Println("Error creating server", err)

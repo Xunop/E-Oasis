@@ -13,16 +13,18 @@ import (
 )
 
 type Handler struct {
-	store  *store.Store
-	pool   *worker.Pool
-	router *mux.Router
+	store      *store.Store
+	uploadPool worker.WorkPool
+	parsePool  worker.WorkPool
+	router     *mux.Router
 }
 
-func Server(router *mux.Router, store *store.Store, pool *worker.Pool) {
+func Server(router *mux.Router, store *store.Store, pools... worker.WorkPool) {
 	handler := &Handler{
-		store:  store,
-		pool:   pool,
-		router: router,
+		store:      store,
+		uploadPool: pools[0],
+		parsePool:  pools[1],
+		router:     router,
 	}
 
 	sr := router.PathPrefix("/api/v1").Subrouter()
@@ -43,9 +45,9 @@ func Server(router *mux.Router, store *store.Store, pool *worker.Pool) {
 
 	sr.HandleFunc("/user", handler.createUser).Methods(http.MethodPost)
 	sr.HandleFunc("/users", handler.listUsers).Methods(http.MethodGet)
-    sr.HandleFunc("/signup", handler.signUp).Methods(http.MethodPost)
-    sr.HandleFunc("/signin", handler.signIn).Methods(http.MethodPost)
-    sr.HandleFunc("/settings/general", handler.SetGeneralSettings).Methods(http.MethodPost)
-    sr.HandleFunc("/books", handler.listBooks).Methods(http.MethodGet)
-    sr.HandleFunc("/book/{id}", handler.addBook).Methods(http.MethodPost)
+	sr.HandleFunc("/signup", handler.signUp).Methods(http.MethodPost)
+	sr.HandleFunc("/signin", handler.signIn).Methods(http.MethodPost)
+	sr.HandleFunc("/settings/general", handler.SetGeneralSettings).Methods(http.MethodPost)
+	sr.HandleFunc("/books", handler.listBooks).Methods(http.MethodGet)
+	sr.HandleFunc("/book", handler.addBook).Methods(http.MethodPost)
 }

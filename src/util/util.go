@@ -2,8 +2,11 @@ package util
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"net/mail"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -60,4 +63,35 @@ func RandomString(n int) (string, error) {
 		}
 	}
 	return sb.String(), nil
+}
+
+// generateNewFileName is a helper function to generate a new file name
+func GenerateNewFileName(filePath string) string {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return filePath // file does not exist, return the same name
+	}
+
+	dir := filepath.Dir(filePath)
+	base := filepath.Base(filePath)
+	ext := filepath.Ext(base)
+	fileName := strings.TrimSuffix(base, ext)
+
+	existingFiles, err := filepath.Glob(filepath.Join(dir, fileName+"_*[0-9]"+ext))
+	if err != nil {
+		return filePath
+	}
+
+	index := 1
+	for _, existingFile := range existingFiles {
+		existingBase := filepath.Base(existingFile)
+		existingName := strings.TrimSuffix(existingBase, ext)
+		var existingIndex int
+		fileName = strings.Split(existingName, "_")[0]
+		existingIndex, err = strconv.Atoi(strings.Split(existingName, "_")[1])
+		if err == nil && existingIndex >= index {
+			index = existingIndex + 1
+		}
+	}
+	newFileName := fmt.Sprintf("%s_%d%s", fileName, index, ext)
+	return filepath.Join(dir, newFileName)
 }

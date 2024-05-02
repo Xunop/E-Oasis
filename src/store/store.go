@@ -7,15 +7,17 @@ import (
 
 type Store struct {
 	db                 *sql.DB
-	metaDb			   *sql.DB  // metaDb is calibre database
+	metaDb             *sql.DB  // metaDb is calibre database
 	UserCache          sync.Map // map[int]*User
 	UserSettingCache   sync.Map // map[string]*UserSetting
 	SystemSettingCache sync.Map // map[string]*SystemSetting
+	JobCache           sync.Map // map[int]*Job
+	BookCache          sync.Map // map[int]*Book
 }
 
 func NewStore(db *sql.DB, metaDB *sql.DB) *Store {
 	return &Store{
-		db: db,
+		db:     db,
 		metaDb: metaDB,
 	}
 }

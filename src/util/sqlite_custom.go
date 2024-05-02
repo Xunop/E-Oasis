@@ -3,9 +3,11 @@ package util
 import (
 	"database/sql/driver"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
 	"modernc.org/sqlite"
 )
 
@@ -32,11 +34,11 @@ func (sc *SortedConcatenate) Step(ctx *sqlite.FunctionContext, rowArgs []driver.
 	value := ""
 	switch rowArgs[1].(type) {
 	case string:
-	    value = rowArgs[1].(string)
+		value = rowArgs[1].(string)
 	default:
 		return fmt.Errorf("invalid type: %T", rowArgs[1])
 	}
-	if sc.ans != nil && ndx != 0 && value != ""{
+	if sc.ans != nil && ndx != 0 && value != "" {
 		sc.ans[ndx] = value
 	}
 	return nil
@@ -73,8 +75,8 @@ func (sc *SortedConcatenate) GetFinalCalled() bool {
 }
 
 type Concatenate struct {
-	ans         []string
-	sep         string
+	ans []string
+	sep string
 }
 
 func NewConcatenate(sep string) *Concatenate {
@@ -82,7 +84,7 @@ func NewConcatenate(sep string) *Concatenate {
 }
 
 func (c *Concatenate) Step(ctx *sqlite.FunctionContext, rowArgs []driver.Value) error {
-    value := ""
+	value := ""
 	switch rowArgs[0].(type) {
 	case string:
 		value = rowArgs[0].(string)
@@ -104,4 +106,48 @@ func (c *Concatenate) WindowInverse(ctx *sqlite.FunctionContext, args []driver.V
 }
 
 func (c *Concatenate) Final(ctx *sqlite.FunctionContext) {
+}
+
+func TitleSort(title string) string {
+	// calibre sort stuff
+	// ^(A|The|An|Der|Die|Das|Den|Ein|Eine|Einen|Dem|Des|Einem|Eines|Le|La|Les|L\'|Un|Une)\s+
+	match := TitleSortMatcher.FindStringSubmatch(title)
+	if match != nil {
+		prep := match[1]
+		title = strings.TrimPrefix(title, prep) + ", " + prep
+	}
+	return strings.TrimSpace(title)
+}
+
+func GetSortedAuthor(value string) string {
+	var value2 string
+	regexes := []string{"^(JR|SR)\\.?$", "^I{1,3}\\.?$", "^IV\\.?$"}
+	combined := "(" + strings.Join(regexes, "|") + ")"
+	values := strings.Split(value, " ")
+
+	if strings.Index(value, ",") == -1 {
+		if match, _ := regexp.MatchString(combined, strings.ToUpper(values[len(values)-1])); match {
+			if len(values) > 1 {
+				value2 = values[len(values)-2] + ", " + strings.Join(values[:len(values)-2], " ") + " " + values[len(values)-1]
+			} else {
+				value2 = values[0]
+			}
+		} else if len(values) == 1 {
+			value2 = values[0]
+		} else {
+			value2 = values[len(values)-1] + ", " + strings.Join(values[:len(values)-1], " ")
+		}
+	} else {
+		value2 = value
+	}
+
+	return value2
+}
+
+func UUID4() (string, error) {
+	uuidObj, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	return uuidObj.String(), nil
 }

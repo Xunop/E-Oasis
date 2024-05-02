@@ -31,6 +31,8 @@ func (m *Middleware) HandleCORS(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+		// FIXME: json: unsupported type: func() (io.ReadCloser, error)
+		log.Debug("test in cors", zap.Any("r", r))
 		next.ServeHTTP(w, r)
 	})
 }

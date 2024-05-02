@@ -50,8 +50,8 @@ func (m *AuthInterceptor) AuthenticationInterceptor(next http.Handler) http.Hand
 			log.Debug("Failed to authenticate user",
 				zap.String("client_ip", clientIP),
 				zap.String("user_agent", r.UserAgent()),
-				zap.Error(err),
 			)
+			log.Fallback("Error", err.Error())
 			response.Unauthorized(w, r)
 			return
 		}

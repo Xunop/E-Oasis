@@ -28,7 +28,7 @@ func init() {
 }
 
 func createDb() error {
-	dir := os.TempDir()
+	dir = os.TempDir()
 	dir += "/e-oasis-test"
 	// Create a directory if not exists
 	if _, err := os.Stat(dir); os.IsNotExist(err) {

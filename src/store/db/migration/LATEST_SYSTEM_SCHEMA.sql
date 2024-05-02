@@ -113,3 +113,15 @@ CREATE TABLE tag (
   creator_id INTEGER NOT NULL,
   UNIQUE(name, creator_id)
 );
+
+-- job
+CREATE TABLE job (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  path TEXT NOT NULL,
+  type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  FOREIGN KEY (user_id) REFERENCES user(id),
+  CONSTRAINT path_length CHECK (LENGTH(path) <= 255),
+  CONSTRAINT unique_path UNIQUE (path)
+);

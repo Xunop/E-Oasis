@@ -4,36 +4,47 @@ type Meta struct {
 }
 
 type Book struct {
-	ID           int  `json:"id"`
+	ID           int    `json:"id"`
 	Title        string `json:"title"`
 	SortTitle    string `json:"sort"`
 	TimeStamp    string `json:"timestamp"`
 	PublishDate  string `json:"pubdate"`
-	SeriesIndex  int  `json:"series_index"`
+	SeriesIndex  int    `json:"series_index"`
 	AuthorSort   string `json:"author_sort"`
-	Isbn         string `json:"isbn"`
-	Iccn         string `json:"iccn"`
+	ISBN         string `json:"isbn"`
+	LCCN         string `json:"lccn"`
 	Path         string `json:"path"`
 	Flags        int    `json:"flags"`
 	UUID         string `json:"uuid"`
-	HasCover     int    `json:"has_cover"`
+	HasCover     bool   `json:"has_cover"`
 	LastModified string `json:"last_modified"`
 }
 
 type FindBook struct {
-	ID    *int  `json:"id"`
+	ID    *int    `json:"id"`
 	Title *string `json:"title"`
 	// SortTitle string `json:"sort"`
 	AuthorSort *string `json:"author_sort"`
-	Isbn       *string `json:"isbn"`
-	Iccn       *string `json:"iccn"`
+	ISBN       *string `json:"isbn"`
+	LCCN       *string `json:"lccn"`
 	OrderBy    *string `json:"order_by"`
 
 	// Random and limit are used in list books.
 	// Whether to return random books.
 	Random bool `json:"random"`
 	// The maximum number of books to return.
-	Limit  *int `json:"limit"`
+	Limit *int `json:"limit"`
+}
+
+type Publisher struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Sort string `json:"sort"`
+}
+
+type Language struct {
+	ID       int    `json:"id"`
+	LangCode string `json:"lang_code"`
 }
 
 type BookAuthorLink struct {
