@@ -71,6 +71,7 @@ func parseEpub(path string) (*model.BookMeta, error) {
 		Book:      newBook,
 		Publisher: &model.Publisher{Name: bookPublisher},
 		Language:  &model.Language{},
+		Author:    &model.Author{Name: bookAuthor, Sort: sortAuthor},
 	}
 	return bookMeta, err
 }

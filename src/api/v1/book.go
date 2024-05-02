@@ -17,7 +17,20 @@ import (
 )
 
 func (h *Handler) listBooks(w http.ResponseWriter, r *http.Request) {
-	books, err := h.store.ListBooks(&model.FindBook{})
+	userID, err := strconv.Atoi(request.GetUserID(r))
+	if err != nil {
+		log.Logger.Error("Failed to get user ID", zap.Error(err))
+		response.BadRequest(w, r, err)
+		return
+	}
+	find := &model.FindBook{}
+	// If user is not admin or host, only show own books
+	if request.GetUserRole(r) != model.RoleHost && request.GetUserRole(r) != model.RoleAdmin {
+		log.Debug("User is not admin or host, only show own books")
+		find.UserID = &userID
+	}
+
+	books, err := h.store.ListBooks(find)
 	if err != nil {
 		log.Logger.Error("Error listing books", zap.Error(err))
 		response.ServerError(w, r, err)
@@ -28,19 +41,6 @@ func (h *Handler) listBooks(w http.ResponseWriter, r *http.Request) {
 
 // addBook need to parse the format of the book and add it to the store
 func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
-	// book := &model.Book{}
-	// if err := json.NewDecoder(r.Body).Decode(book); err != nil {
-	// 	log.Logger.Error("Error decoding book", zap.Error(err))
-	// 	http.Error(w, "Error decoding book", http.StatusBadRequest)
-	// 	return
-	// }
-	// if err := h.store.AddBook(book); err != nil {
-	// 	log.Logger.Error("Error adding book", zap.Error(err))
-	// 	http.Error(w, "Error adding book", http.StatusInternalServerError)
-	// 	return
-	// }
-	// response.OK(w, r, book)
-
 	if err := r.ParseMultipartForm(config.Opts.MaxUploadSize << 20); err != nil {
 		log.Error("Max upload size exceeded", zap.Error(err))
 		log.Error("Now size is", zap.Int64("size", r.ContentLength<<20))
@@ -52,14 +52,6 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 
 	jobs := make([]model.Job, 0)
 	for _, file := range files {
-		// if file.Size > config.Opts.MaxUploadSize<<20 {
-		// 	err := errors.New("File size exceeded")
-		// 	log.Error("Max upload size exceeded", zap.Error(err))
-		// 	log.Error("Now size is", zap.Int64("size", r.ContentLength<<20))
-		// 	response.BadRequest(w, r, err)
-		// 	return
-		// }
-
 		uid, err := strconv.Atoi(request.GetUserID(r))
 		if err != nil {
 			log.Error("Filed to get user ID", zap.Error(err))
@@ -79,12 +71,39 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 			Item:   file,
 		}
 		go h.uploadPool.Push(job)
-		jobs = append(jobs, job)
+		newJob, err := h.store.AddJob(job)
+		if err != nil {
+			log.Error("Failed to add job", zap.Error(err))
+			response.ServerError(w, r, err)
+			return
+		}
+		jobs = append(jobs, *newJob)
 	}
 	response.OK(w, r, jobs)
 }
 
-// parseBook is a helper function to parse the book format
-func (h *Handler) parseBook(name string) (*model.Book, error) {
-	return nil, nil
+// TODO: Add batch delete
+func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
+	bookID := request.RouteIntParam(r, "id")
+	userID, err := strconv.Atoi(request.GetUserID(r))
+	if err != nil {
+		log.Error("Failed to get user ID", zap.Error(err))
+		response.BadRequest(w, r, err)
+		return
+	}
+
+	log.Debug("Deleting book", zap.Int("bookID", bookID), zap.Int("userID", userID))
+	find := &model.FindBook{BookID: &bookID}
+	// If user is not admin or host, only allow to delete own book
+	if request.GetUserRole(r) != model.RoleHost && request.GetUserRole(r) != model.RoleAdmin {
+		find.UserID = &userID
+	}
+
+	if err := h.store.RemoveBook(find); err != nil {
+		log.Error("Failed to delete book", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+
+	response.NoContent(w, r)
 }

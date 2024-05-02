@@ -50,4 +50,7 @@ func Server(router *mux.Router, store *store.Store, pools... worker.WorkPool) {
 	sr.HandleFunc("/settings/general", handler.SetGeneralSettings).Methods(http.MethodPost)
 	sr.HandleFunc("/books", handler.listBooks).Methods(http.MethodGet)
 	sr.HandleFunc("/book", handler.addBook).Methods(http.MethodPost)
+	sr.HandleFunc("/book/{id}", handler.deleteBook).Methods(http.MethodDelete)
+	// sr.HandleFunc("/book/{id}", handler.updateBook).Methods(http.MethodPut)
+	// sr.HandleFunc("/book/{id}", handler.getBook).Methods(http.MethodGet)
 }

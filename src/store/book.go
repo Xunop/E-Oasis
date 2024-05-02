@@ -9,7 +9,58 @@ import (
 	"go.uber.org/zap"
 )
 
+func (s *Store) GetBook(find *model.FindBook) (*model.Book, error) {
+	if find.ID != nil {
+		if cache, ok := s.BookCache.Load(*find.ID); ok {
+			return cache.(*model.Book), nil
+		}
+	}
+
+	list, err := s.ListBooks(find)
+	if err != nil {
+		return nil, err
+	}
+	if len(list) == 0 {
+		return nil, nil
+	}
+
+	book := list[0]
+	s.BookCache.Store(book.ID, book)
+	return book, nil
+}
+
+func (s *Store) RemoveBook(find *model.FindBook) error {
+	if find.UserID != nil {
+		return s.RemoveBookByUserID(*find.UserID, *find.BookID)
+	}
+	stmt := `DELETE FROM books WHERE id = ?`
+	args := []any{find.BookID}
+
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
+	tx, err := s.metaDb.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	if _, err := tx.Exec(stmt, args...); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) ListBooks(find *model.FindBook) ([]*model.Book, error) {
+	if v := find.UserID; v != nil {
+		return s.ListBooksByUserID(*v)
+	}
+
 	where, args := []string{"1 = 1"}, []any{}
 
 	if v := find.ID; v != nil {
@@ -96,7 +147,166 @@ func (s *Store) ListBooks(find *model.FindBook) ([]*model.Book, error) {
 	return list, nil
 }
 
-// TODO: Implement AddBook
+func (s *Store) ListBooksByUserID(userID int) ([]*model.Book, error) {
+	stmt := `
+		SELECT
+	        book_id
+	    FROM book_user_link
+	    WHERE user_id = ?
+	`
+	args := []any{userID}
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	rows, err := s.appDb.Query(stmt, args...)
+	if err != nil {
+		log.Error("Failed to query books by user ID", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := make([]string, 0)
+
+	for rows.Next() {
+		var bookID int
+		if err := rows.Scan(&bookID); err != nil {
+			log.Error("Failed to scan book ID", zap.Error(err))
+			return nil, err
+		}
+		list = append(list, fmt.Sprintf("%d", bookID))
+	}
+
+	query := `
+        SELECT
+            id,
+            title,
+            sort,
+            timestamp,
+            pubdate,
+            series_index,
+            author_sort,
+            isbn,
+            lccn,
+            path,
+            flags,
+            uuid,
+            has_cover,
+            last_modified
+        FROM books
+        WHERE id IN` + `(` + strings.Join(list, ",") + `)`
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", query, args))
+
+	rows, err = s.metaDb.Query(query)
+	if err != nil {
+		log.Error("Failed to query books", zap.Error(err))
+		return nil, err
+	}
+
+	listBooks := make([]*model.Book, 0)
+	for rows.Next() {
+		var book model.Book
+		if err := rows.Scan(
+			&book.ID,
+			&book.Title,
+			&book.SortTitle,
+			&book.TimeStamp,
+			&book.PublishDate,
+			&book.SeriesIndex,
+			&book.AuthorSort,
+			&book.ISBN,
+			&book.LCCN,
+			&book.Path,
+			&book.Flags,
+			&book.UUID,
+			&book.HasCover,
+			&book.LastModified,
+		); err != nil {
+			log.Error("Failed to scan book", zap.Error(err))
+			return nil, err
+		}
+		listBooks = append(listBooks, &book)
+	}
+	return listBooks, nil
+}
+
+func (s *Store) RemoveBookByUserID(userID int, bookID ...int) error {
+	where, args := []string{"1 = 1"}, []any{}
+
+	where, args = append(where, "user_id = ?"), append(args, userID)
+	bookIDs := make([]string, 0)
+
+	for _, id := range bookID {
+		bookIDs = append(bookIDs, fmt.Sprintf("%d", id))
+	}
+
+	stmt := `
+		DELETE FROM book_user_link
+		WHERE user_id = ? AND book_id IN (` + strings.Join(bookIDs, ",") + `)
+	    RETURNING book_id
+	`
+
+	s.appDbLock.Lock()
+	defer s.appDbLock.Unlock()
+	tx, err := s.appDb.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	rows, err := tx.Query(stmt, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	rmList := make([]int, 0)
+	for rows.Next() {
+		var bookID int
+		if err := rows.Scan(&bookID); err != nil {
+			return err
+		}
+		rmList = append(rmList, bookID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	if len(rmList) == 0 {
+		return nil
+	}
+
+	where, args = []string{"1 = 1"}, []any{}
+	where, args = append(where, "id IN ("+strings.Join(bookIDs, ",")+")"), append(args, rmList)
+
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
+	tx, err = s.metaDb.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt = `
+		DELETE FROM books
+		WHERE ` + strings.Join(where, " AND ")
+	if _, err = tx.Exec(stmt, args...); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 	stmt := `
         INSERT INTO books (
@@ -228,6 +438,36 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 		return nil, err
 	}
 	return &newLanguage, nil
+}
+
+func (s *Store) AddAuthor(author *model.Author) (*model.Author, error) {
+	stmt := `
+	    INSERT INTO authors (
+	    name, sort, link
+	    ) VALUES (?,?,?) RETURNING id,name,sort,link`
+	args := []any{}
+
+	args = append(args, author.Name)
+	args = append(args, author.Sort)
+	args = append(args, author.Link)
+
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
+
+	tx, err := s.metaDb.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	var newAuthor model.Author
+	if err := tx.QueryRow(stmt, args...).Scan(&newAuthor.ID, &newAuthor.Name, &newAuthor.Sort, &newAuthor.Link); err != nil {
+		return nil, err
+	}
+	return &newAuthor, nil
 }
 
 func (s *Store) CheckBook(title string) (bool, error) {

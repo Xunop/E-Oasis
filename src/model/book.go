@@ -21,8 +21,10 @@ type Book struct {
 }
 
 type FindBook struct {
-	ID    *int    `json:"id"`
-	Title *string `json:"title"`
+	ID     *int    `json:"id"`
+	Title  *string `json:"title"`
+	UserID *int    `json:"user_id"`
+	BookID *int    `json:"book_id"`
 	// SortTitle string `json:"sort"`
 	AuthorSort *string `json:"author_sort"`
 	ISBN       *string `json:"isbn"`
@@ -51,6 +53,7 @@ type BookMeta struct {
 	Book      *Book      `json:"book"`
 	Publisher *Publisher `json:"publisher"`
 	Language  *Language  `json:"language"`
+	Author    *Author    `json:"author"`
 }
 
 type BookAuthorLink struct {

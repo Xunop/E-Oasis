@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/log"
+	"go.uber.org/zap"
 )
 
 type ContextKey int
@@ -39,5 +41,6 @@ func GetUsername(r *http.Request) string {
 }
 
 func GetUserRole(r *http.Request) model.Role {
+	log.Info("GetUserRole", zap.Any("role", getContextStringValue(r, UserRolesContextKey)))
 	return (model.Role)(getContextStringValue(r, UserRolesContextKey))
 }

@@ -31,6 +31,17 @@ CREATE TABLE user (
 
 CREATE INDEX idx_user_username ON user (username);
 
+-- user_book_link
+CREATE TABLE book_user_link (
+  id INTEGER NOT NULL,
+  user_id INTEGER,
+  book_id INTEGER,
+  date_added BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
+  PRIMARY KEY (id),
+  FOREIGN KEY(user_id) REFERENCES user (id),
+  UNIQUE(book_id, user_id)
+);
+
 -- user_setting
 CREATE TABLE user_setting (
   user_id INTEGER NOT NULL,
@@ -118,10 +129,9 @@ CREATE TABLE tag (
 CREATE TABLE job (
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL,
-  path TEXT NOT NULL,
+  `path` TEXT NOT NULL,
   type TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   FOREIGN KEY (user_id) REFERENCES user(id),
-  CONSTRAINT path_length CHECK (LENGTH(path) <= 255),
-  CONSTRAINT unique_path UNIQUE (path)
+  CONSTRAINT path_length CHECK (LENGTH(path) <= 255)
 );

@@ -214,6 +214,12 @@ func (w *BookParseWorker) Run() {
 			continue
 		}
 
+		_, err = w.store.AddAuthor(bookMeta.Author)
+		if err != nil {
+			log.Error("Error add author", zap.String("author", bookMeta.Author.Name), zap.Error(err))
+			continue
+		}
+
 		// _, err := w.store.AddLanguage(&model.Language{Name: bookLanguage})
 	}
 }
