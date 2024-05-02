@@ -467,7 +467,44 @@ func (s *Store) AddAuthor(author *model.Author) (*model.Author, error) {
 	if err := tx.QueryRow(stmt, args...).Scan(&newAuthor.ID, &newAuthor.Name, &newAuthor.Sort, &newAuthor.Link); err != nil {
 		return nil, err
 	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return &newAuthor, nil
+}
+
+func (s *Store) AddBookUserLink(create *model.BookUserLink) (*model.BookUserLink, error) {
+	stmt := `
+		INSERT INTO book_user_link (
+			book_id,
+			user_id
+		) VALUES (?,?)
+		RETURNING id, book_id, user_id`
+	args := []any{}
+
+	args = append(args, create.BookID)
+	args = append(args, create.UserID)
+
+	s.appDbLock.Lock()
+	defer s.appDbLock.Unlock()
+	tx, err := s.appDb.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	var newLink model.BookUserLink
+	if err := tx.QueryRow(stmt, args...).Scan(&newLink.ID, &newLink.BookID, &newLink.UserID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return &newLink, nil
 }
 
 func (s *Store) CheckBook(title string) (bool, error) {

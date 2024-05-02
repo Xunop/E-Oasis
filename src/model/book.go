@@ -56,6 +56,12 @@ type BookMeta struct {
 	Author    *Author    `json:"author"`
 }
 
+type BookUserLink struct {
+	ID     int `json:"id"`
+	BookID int `json:"book"`
+	UserID int `json:"user"`
+}
+
 type BookAuthorLink struct {
 	ID       int `json:"id"`
 	BookID   int `json:"book"`

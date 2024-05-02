@@ -6,6 +6,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/Xunop/e-oasis/config"
 	"github.com/Xunop/e-oasis/log"
@@ -119,7 +121,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 
 		w.store.JobCache.Store(j.ID, &j)
 		// Next Parse the book
-		// File path is the path of the book: /path/to/book/book.epub
+		// File path is the path of the book: /path/uid/books/book.epub
 		jobDone <- filePath
 
 		log.Debug("File uploaded successfully",
@@ -185,6 +187,7 @@ func (w *BookParseWorker) Run() {
 			continue
 		}
 
+		// When We parse the book, we need to save the book metadata
 		// Save the book metadata
 		newBook := &model.Book{
 			Title:        bookMeta.Book.Title,
@@ -208,17 +211,38 @@ func (w *BookParseWorker) Run() {
 		// w.store.AddBookAuthorLink(&model.BookAuthorLink{BookID: returnBook.ID, AuthorID: 1})
 
 		// TODO: Handler return publisher
-		_, err = w.store.AddPublisher(bookMeta.Publisher)
+		publisherRes, err := w.store.AddPublisher(bookMeta.Publisher)
 		if err != nil {
 			log.Error("Error add publisher", zap.String("publisher", bookMeta.Publisher.Name), zap.Error(err))
+		}
+		log.Debug("Add publisher response", zap.Any("response", publisherRes))
+
+		authorRes, err := w.store.AddAuthor(bookMeta.Author)
+		if err != nil {
+			log.Error("Error add author", zap.String("author", bookMeta.Author.Name), zap.Error(err))
+		}
+		log.Debug("Add author response", zap.Any("response", authorRes))
+
+		uidIdx := 0
+		for idx, part := range strings.Split(path, "/") {
+			if part == "books" {
+				uidIdx = idx
+			}
+		}
+		if uidIdx == 0 {
+			log.Error("Error getting user ID", zap.String("path", path))
 			continue
 		}
 
-		_, err = w.store.AddAuthor(bookMeta.Author)
+		uid, err := strconv.Atoi(strings.Split(path, "/")[uidIdx - 1])
 		if err != nil {
-			log.Error("Error add author", zap.String("author", bookMeta.Author.Name), zap.Error(err))
-			continue
+			log.Error("Error getting user ID", zap.Error(err), zap.String("path", path))
 		}
+		bookUserLinkRes, err := w.store.AddBookUserLink(&model.BookUserLink{BookID: returnBook.ID, UserID: uid})
+		if err != nil {
+			log.Error("Error add book user link", zap.Error(err))
+		}
+		log.Debug("Add book user link response", zap.Any("response", bookUserLinkRes))
 
 		// _, err := w.store.AddLanguage(&model.Language{Name: bookLanguage})
 	}

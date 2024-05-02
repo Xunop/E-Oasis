@@ -36,7 +36,6 @@ CREATE TABLE book_user_link (
   id INTEGER NOT NULL,
   user_id INTEGER,
   book_id INTEGER,
-  date_added BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
   PRIMARY KEY (id),
   FOREIGN KEY(user_id) REFERENCES user (id),
   UNIQUE(book_id, user_id)
