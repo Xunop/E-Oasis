@@ -1,4 +1,4 @@
-package worker
+package worker // import "github.com/Xunop/e-oasis/worker"
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func parseBook(path string) (*model.BookMeta, error) {
+func ParseBook(path string) (*model.BookMeta, error) {
 	bookType := filepath.Ext(path)
 	switch bookType {
 	case ".epub":

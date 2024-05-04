@@ -17,7 +17,9 @@ import (
 )
 
 var (
-	jobDone = make(chan string)
+	uploadDone = make(chan model.Job)
+	metaBatch  = make(chan *model.BookMeta, 10)
+	MetaSingle = make(chan model.BookMeta, 1)
 )
 
 type BookUploadPool struct {
@@ -122,7 +124,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		w.store.JobCache.Store(j.ID, &j)
 		// Next Parse the book
 		// File path is the path of the book: /path/uid/books/book.epub
-		jobDone <- filePath
+		uploadDone <- job
 
 		log.Debug("File uploaded successfully",
 			zap.String("file_name", fileHeader.Filename),
@@ -155,6 +157,7 @@ func NewParsePool(store *store.Store, size int) *BookParsePool {
 		Queue: make(chan model.Job),
 	}
 
+	go SaveBookMeta(store)
 	for i := 0; i < size; i++ {
 		worker := &BookParseWorker{id: i, store: store}
 		go worker.Run()
@@ -175,74 +178,86 @@ func (w *BookParseWorker) Run() {
 	log.Debug("BookParseWorker is running", zap.Int("worker_id", w.id))
 
 	for {
-		path := <-jobDone
+		job := <-uploadDone
 
 		log.Debug("Job reveived by worker",
 			zap.Int("work_id", w.id),
-			zap.String("path", path))
+			zap.String("path", job.Path))
 
-		bookMeta, err := parseBook(path)
+		log.Debug("Parse book in", zap.String("dir", job.Path))
+
+		filePath := fmt.Sprintf("%s/%s", job.Path, job.Item.(*multipart.FileHeader).Filename)
+		bookMeta, err := ParseBook(filePath)
 		if err != nil {
-			log.Error("Parse book error", zap.String("Book", path), zap.Error(err))
+			log.Error("Parse book error", zap.String("Book", filePath), zap.Error(err))
 			continue
 		}
+
+		if job.Type == "SINGLE" {
+			MetaSingle <- *bookMeta
+		}
+
+		metaBatch <- bookMeta
+	}
+}
+
+func SaveBookMeta(s *store.Store) {
+	for {
+		metaData := <-metaBatch
 
 		// When We parse the book, we need to save the book metadata
 		// Save the book metadata
 		newBook := &model.Book{
-			Title:        bookMeta.Book.Title,
-			SortTitle:    bookMeta.Book.SortTitle,
-			PublishDate:  bookMeta.Book.PublishDate,
-			AuthorSort:   bookMeta.Book.AuthorSort,
-			ISBN:         bookMeta.Book.ISBN,
-			Path:         bookMeta.Book.Path,
-			UUID:         bookMeta.Book.UUID,
-			HasCover:     bookMeta.Book.HasCover,
-			LastModified: bookMeta.Book.LastModified,
+			Title:        metaData.Book.Title,
+			SortTitle:    metaData.Book.SortTitle,
+			PublishDate:  metaData.Book.PublishDate,
+			AuthorSort:   metaData.Book.AuthorSort,
+			ISBN:         metaData.Book.ISBN,
+			Path:         metaData.Book.Path,
+			UUID:         metaData.Book.UUID,
+			HasCover:     metaData.Book.HasCover,
+			LastModified: metaData.Book.LastModified,
 		}
 
-		returnBook, err := w.store.AddBook(newBook)
+		returnBook, err := s.AddBook(newBook)
 		if err != nil {
 			log.Error("Error adding book", zap.Error(err))
 			continue
 		}
-		w.store.BookCache.Store(returnBook.ID, returnBook)
+		s.BookCache.Store(returnBook.ID, returnBook)
 
-		// w.store.AddBookAuthorLink(&model.BookAuthorLink{BookID: returnBook.ID, AuthorID: 1})
-
-		// TODO: Handler return publisher
-		publisherRes, err := w.store.AddPublisher(bookMeta.Publisher)
+		publisherRes, err := s.AddPublisher(metaData.Publisher)
 		if err != nil {
-			log.Error("Error add publisher", zap.String("publisher", bookMeta.Publisher.Name), zap.Error(err))
+			log.Error("Error add publisher", zap.String("publisher", metaData.Publisher.Name), zap.Error(err))
 		}
 		log.Debug("Add publisher response", zap.Any("response", publisherRes))
 
-		authorRes, err := w.store.AddAuthor(bookMeta.Author)
+		authorRes, err := s.AddAuthor(metaData.Author)
 		if err != nil {
-			log.Error("Error add author", zap.String("author", bookMeta.Author.Name), zap.Error(err))
+			log.Error("Error add author", zap.String("author", metaData.Author.Name), zap.Error(err))
 		}
 		log.Debug("Add author response", zap.Any("response", authorRes))
 
 		uidIdx := 0
-		for idx, part := range strings.Split(path, "/") {
+		for idx, part := range strings.Split(newBook.Path, "/") {
 			if part == "books" {
 				uidIdx = idx
 			}
 		}
 		if uidIdx == 0 {
-			log.Error("Error getting user ID", zap.String("path", path))
+			log.Error("Error getting user ID", zap.String("path", newBook.Path))
 			continue
 		}
-		uid, err := strconv.Atoi(strings.Split(path, "/")[uidIdx - 1])
+		uid, err := strconv.Atoi(strings.Split(newBook.Path, "/")[uidIdx-1])
 		if err != nil {
-			log.Error("Error getting user ID", zap.Error(err), zap.String("path", path))
+			log.Error("Error getting user ID", zap.Error(err), zap.String("path", newBook.Path))
 		}
-		bookUserLinkRes, err := w.store.AddBookUserLink(&model.BookUserLink{BookID: returnBook.ID, UserID: uid})
+		bookUserLinkRes, err := s.AddBookUserLink(&model.BookUserLink{BookID: returnBook.ID, UserID: uid})
 		if err != nil {
 			log.Error("Error add book user link", zap.Error(err))
 		}
 		log.Debug("Add book user link response", zap.Any("response", bookUserLinkRes))
-
 		// _, err := w.store.AddLanguage(&model.Language{Name: bookLanguage})
+		// w.store.AddBookAuthorLink(&model.BookAuthorLink{BookID: returnBook.ID, AuthorID: 1})
 	}
 }

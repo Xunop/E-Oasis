@@ -13,6 +13,7 @@ import (
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
 	"github.com/Xunop/e-oasis/util"
+	"github.com/Xunop/e-oasis/worker"
 	"go.uber.org/zap"
 )
 
@@ -39,8 +40,8 @@ func (h *Handler) listBooks(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, r, books)
 }
 
-// addBook need to parse the format of the book and add it to the store
-func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
+// addBookBatch need to parse the format of the book and add it to the store
+func (h *Handler) addBookBatch(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(config.Opts.MaxUploadSize << 20); err != nil {
 		log.Error("Max upload size exceeded", zap.Error(err))
 		log.Error("Now size is", zap.Int64("size", r.ContentLength<<20))
@@ -60,13 +61,13 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 
 		fileBase := filepath.Base(file.Filename)
 		ext := filepath.Ext(fileBase)
-		bookFileName := strings.TrimSuffix(fileBase, ext)
-		bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookFileName)
+		bookDir := strings.TrimSuffix(fileBase, ext)
+		bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookDir)
 		bookPath = util.GenerateNewDirName(bookPath)
 		job := model.Job{
 			UserID: uid,
 			Path:   bookPath,
-			Type:   "UPLOAD",
+			Type:   "BATCH",
 			Status: model.JobStatusPending,
 			Item:   file,
 		}
@@ -80,6 +81,67 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 		jobs = append(jobs, *newJob)
 	}
 	response.OK(w, r, jobs)
+}
+
+// addBookSingle parse the book and return to user
+// User can modify book metadata(title, author, cover, etc), so when we parse book, we need to return metadata to user.
+// Besides, we can batch upload books, user don't need to modify book metadata.
+func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(config.Opts.MaxUploadSize << 20); err != nil {
+		log.Error("Max upload size exceeded", zap.Error(err))
+		log.Error("Now size is", zap.Int64("size", r.ContentLength<<20))
+		response.BadRequest(w, r, err)
+		return
+	}
+
+	files := r.MultipartForm.File["file"]
+	if len(files) > 1 || len(files) <= 0 {
+		response.BadRequest(w, r, fmt.Errorf("Only one file is allowed"))
+		return
+	}
+	uid, err := strconv.Atoi(request.GetUserID(r))
+	if err != nil {
+		log.Error("Filed to get user ID", zap.Error(err))
+		response.BadRequest(w, r, err)
+	}
+
+	fileBase := filepath.Base(files[0].Filename)
+	ext := filepath.Ext(fileBase)
+	bookFileName := strings.TrimSuffix(fileBase, ext)
+	bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookFileName)
+	bookPath = util.GenerateNewDirName(bookPath)
+	job := model.Job{
+		UserID: uid,
+		Path:   bookPath,
+		Type:   "SINGLE",
+		Status: model.JobStatusPending,
+		Item:   files[0],
+	}
+	go h.uploadPool.Push(job)
+	_, err = h.store.AddJob(job)
+	if err != nil {
+		log.Error("Failed to add job", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+
+	bookMeta := <-worker.MetaSingle
+
+	// When We parse the book, we need to save the book metadata
+	// Save the book metadata
+	newBook := &model.Book{
+		Title:        bookMeta.Book.Title,
+		SortTitle:    bookMeta.Book.SortTitle,
+		PublishDate:  bookMeta.Book.PublishDate,
+		AuthorSort:   bookMeta.Book.AuthorSort,
+		ISBN:         bookMeta.Book.ISBN,
+		Path:         bookMeta.Book.Path,
+		UUID:         bookMeta.Book.UUID,
+		HasCover:     bookMeta.Book.HasCover,
+		LastModified: bookMeta.Book.LastModified,
+	}
+	response.OK(w, r, newBook)
+	return
 }
 
 // TODO: Add batch delete and delete link data
