@@ -82,7 +82,7 @@ func (h *Handler) addBook(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, r, jobs)
 }
 
-// TODO: Add batch delete
+// TODO: Add batch delete and delete link data
 func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
 	bookID := request.RouteIntParam(r, "id")
 	userID, err := strconv.Atoi(request.GetUserID(r))
@@ -104,6 +104,8 @@ func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
 		response.ServerError(w, r, err)
 		return
 	}
+	// Delete book from cache
+	h.store.BookCache.Delete(bookID)
 
 	response.NoContent(w, r)
 }

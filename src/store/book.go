@@ -29,6 +29,8 @@ func (s *Store) GetBook(find *model.FindBook) (*model.Book, error) {
 	return book, nil
 }
 
+// TODO: RemoveBook need to remove link between user and book
+// RemoveBook remove book from the store
 func (s *Store) RemoveBook(find *model.FindBook) error {
 	if find.UserID != nil {
 		return s.RemoveBookByUserID(*find.UserID, *find.BookID)
@@ -369,11 +371,8 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 }
 
 func (s *Store) AddPublisher(publisher *model.Publisher) (*model.Publisher, error) {
-	exists, err := s.CheckPublisher(publisher.Name)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
+	if pID, ok := s.CheckPublisher(publisher.Name); ok {
+		publisher.ID = pID
 		return publisher, nil
 	}
 
@@ -441,6 +440,10 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 }
 
 func (s *Store) AddAuthor(author *model.Author) (*model.Author, error) {
+	if aID, ok := s.CheckAuthor(author.Name); ok {
+		author.ID = aID
+		return author, nil
+	}
 	stmt := `
 	    INSERT INTO authors (
 	    name, sort, link
@@ -520,15 +523,24 @@ func (s *Store) CheckBook(title string) (bool, error) {
 	return exists, nil
 }
 
-func (s *Store) CheckPublisher(name string) (bool, error) {
-	stmt := `
-		SELECT EXISTS(SELECT 1 FROM publishers WHERE name = ?)
-	`
+func (s *Store) CheckAuthor(name string) (int, bool) {
+	stmt := `SELECT id FROM authors WHERE name = ?`
 	args := []any{name}
 
-	var exists bool
-	if err := s.metaDb.QueryRow(stmt, args...).Scan(&exists); err != nil {
-		return false, err
+	var authorID int
+	if err := s.metaDb.QueryRow(stmt, args...).Scan(&authorID); err != nil {
+		return 0, false
 	}
-	return exists, nil
+	return authorID, true
+}
+
+func (s *Store) CheckPublisher(name string) (int, bool) {
+	stmt := `SELECT id FROM publishers WHERE name = ?`
+	args := []any{name}
+
+	var publisherID int
+	if err := s.metaDb.QueryRow(stmt, args...).Scan(&publisherID); err != nil {
+		return 0, false
+	}
+	return publisherID, true
 }

@@ -233,7 +233,6 @@ func (w *BookParseWorker) Run() {
 			log.Error("Error getting user ID", zap.String("path", path))
 			continue
 		}
-
 		uid, err := strconv.Atoi(strings.Split(path, "/")[uidIdx - 1])
 		if err != nil {
 			log.Error("Error getting user ID", zap.Error(err), zap.String("path", path))
