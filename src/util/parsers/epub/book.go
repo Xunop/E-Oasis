@@ -199,3 +199,22 @@ func (p *Book) GetDate() string {
 	}
 	return ""
 }
+
+// GetContent returns the given href content
+func (p *Book) GetContent(href string) (string, error) {
+	for _, m := range p.Opf.Manifest {
+		if m.Href == href {
+			rc, err := p.open(p.filename(m.Href))
+			if err != nil {
+				return "", err
+			}
+			defer rc.Close()
+			b, err := io.ReadAll(rc)
+			if err != nil {
+				return "", err
+			}
+			return string(b), nil
+		}
+	}
+	return "", fmt.Errorf("content not found: %s", href)
+}

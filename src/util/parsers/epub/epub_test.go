@@ -55,15 +55,6 @@ func TestEpub(t *testing.T) {
 		fn(b)
 		os.Remove(f)
 	}
-	withLocalBook := func(f string, fn func(*Book)) {
-		b, err := Open(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer b.Close()
-		t.Logf("Opened book: %s", f)
-		fn(b)
-	}
 
 	t.Run("TestOpen", func(t *testing.T) {
 		withNewBook("test.epub", func(b *Book) {
@@ -122,7 +113,18 @@ func TestEpub(t *testing.T) {
 			}
 		})
 	})
+}
 
+func TestLocalBook(t *testing.T) {
+	withLocalBook := func(f string, fn func(*Book)) {
+		b, err := Open(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer b.Close()
+		t.Logf("Opened book: %s", f)
+		fn(b)
+	}
 	// TODO: Just run in myself desktop
 	localBookName := "/home/xun/Workspace/hv_reader/e-oasis/src/util/parsers/epub/温柔的夜(三毛).epub"
 	t.Run("TestGetCoverFromLocalBook", func(t *testing.T) {
@@ -133,6 +135,22 @@ func TestEpub(t *testing.T) {
 				t.Errorf("Error get cover from %s, err: %v", localBookName, err)
 			}
 			t.Logf("Cover image: %s", coverPath)
+		})
+	})
+
+	t.Run("TestGetContentFromLocalBook", func(t *testing.T) {
+		withLocalBook(localBookName, func(b *Book) {
+			items := b.Opf.Manifest
+			for _, item := range items {
+				if item.MediaType != "application/xhtml+xml" {
+					continue
+				}
+				contents, err := b.GetContent(item.Href)
+				if err != nil {
+					t.Errorf("Error get content from %s, err: %v", localBookName, err)
+				}
+				t.Logf("Contents: %v", contents)
+			}
 		})
 	})
 }
