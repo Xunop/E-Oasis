@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	latestSchemaFileName = "LATEST_SCHEMA.sql"
+	latestSchemaFileName = "LATEST_SYSTEM_SCHEMA.sql"
 )
 
-var d *sql.DB
-var md *sql.DB
-var dir string
+var testSysSettingDb *sql.DB
+var testSysSettingMetaDb *sql.DB
+var testSysSettingDir string
 
 // Initialize the logger and config
 func init() {
@@ -27,20 +27,20 @@ func init() {
 	log.Logger = log.NewLogger()
 }
 
-func createDb() error {
-	dir = os.TempDir()
-	dir += "/e-oasis-test"
+func createSysSettingTestDb() error {
+	testSysSettingDir = os.TempDir()
+	testSysSettingDir += "/e-oasis-test"
 	// Create a directory if not exists
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0755)
+	if _, err := os.Stat(testSysSettingDir); os.IsNotExist(err) {
+		err := os.Mkdir(testSysSettingDir, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	filename := dir + "/test_for_system_setting.db"
-	metapath := dir + "/metadata.db"
-	d, _ = sql.Open("sqlite", filename)
-	md, _ = sql.Open("sqlite", metapath)
+	filename := testSysSettingDir + "/test_for_system_setting.db"
+	metapath := testSysSettingDir + "/metadata.db"
+	testSysSettingDb, _ = sql.Open("sqlite", filename)
+	testSysSettingMetaDb, _ = sql.Open("sqlite", metapath)
 	return nil
 }
 
@@ -78,12 +78,12 @@ func execute(stmt string, d *sql.DB) error {
 
 func TestGetOrUpsetSystemSetting(t *testing.T) {
 	// Test code here
-	if err := createDb(); err != nil {
+	if err := createSysSettingTestDb(); err != nil {
 		t.Fatalf("Failed to create db: %v", err)
 	}
-	defer os.Remove(dir)
-	applyLatestSchema(d)
-	s := NewStore(d, md)
+	defer os.Remove(testSysSettingDir)
+	applyLatestSchema(testSysSettingDb)
+	s := NewStore(testSysSettingDb, testSysSettingMetaDb)
 	system, err := s.GetOrUpsetSystemSecuritySetting()
 	if err != nil {
 		t.Fatalf("Failed to create system setting: %v", err)
@@ -96,10 +96,10 @@ func TestGetOrUpsetSystemSetting(t *testing.T) {
 
 func TestGetBasicSystemSetting(t *testing.T) {
 	// Test code here
-	createDb()
-	defer os.Remove(dir)
-	applyLatestSchema(d)
-	s := NewStore(d, md)
+	createSysSettingTestDb()
+	defer os.Remove(testSysSettingDir)
+	applyLatestSchema(testSysSettingDb)
+	s := NewStore(testSysSettingDb, testSysSettingMetaDb)
 	basic, err := s.GetSystemBasicSetting()
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -111,10 +111,10 @@ func TestGetBasicSystemSetting(t *testing.T) {
 
 func TestGetGeneralSystemSetting(t *testing.T) {
 	// Test code here
-	createDb()
-	defer os.Remove(dir)
-	applyLatestSchema(d)
-	s := NewStore(d, md)
+	createSysSettingTestDb()
+	defer os.Remove(testSysSettingDir)
+	applyLatestSchema(testSysSettingDb)
+	s := NewStore(testSysSettingDb, testSysSettingMetaDb)
 	general, err := s.GetSystemGeneralSetting()
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {

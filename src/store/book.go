@@ -510,17 +510,73 @@ func (s *Store) AddBookUserLink(create *model.BookUserLink) (*model.BookUserLink
 	return &newLink, nil
 }
 
-func (s *Store) CheckBook(title string) (bool, error) {
+// SetBookStatus set or update book reading status
+func (s *Store) SetBookStatus(status *model.BookReadingStatusLink) (*model.BookReadingStatusLink, error) {
+	// Insert or update
 	stmt := `
-		SELECT EXISTS(SELECT 1 FROM books WHERE title = ?)
+	INSERT INTO reading_status (
+	         book_id,
+	         user_id,
+	         last_read_time,
+	         cur_page,
+	         percentage,
+	         duration,
+	         page,
+	         status
+	)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(book_id, user_id) DO UPDATE
+	SET
+		last_read_time = EXCLUDED.last_read_time,
+		cur_page = EXCLUDED.cur_page,
+	    percentage = EXCLUDED.percentage,
+	    duration = EXCLUDED.duration,
+		status = EXCLUDED.status
 	`
-	args := []any{title}
+	args := []any{
+		status.BookID,
+		status.UserID,
+		status.LastRead,
+		status.CurPage,
+		status.Percentage,
+		status.Duration,
+		status.Page,
+		status.Status,
+	}
+
+	tx, err := s.appDb.Begin()
+	if err != nil {
+		log.Error("Failed to begin transaction", zap.Error(err))
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	if _, err := tx.Exec(stmt, args...); err != nil {
+		log.Error("Failed to scan book reading status link", zap.Error(err))
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return status, nil
+}
+
+func (s *Store) CheckBook(bookID int) bool {
+	stmt := `
+		SELECT EXISTS(SELECT 1 FROM books WHERE id = ?)
+	`
+	args := []any{bookID}
 
 	var exists bool
 	if err := s.metaDb.QueryRow(stmt, args...).Scan(&exists); err != nil {
-		return false, err
+		return false
 	}
-	return exists, nil
+	return exists
 }
 
 func (s *Store) CheckAuthor(name string) (int, bool) {
@@ -543,4 +599,29 @@ func (s *Store) CheckPublisher(name string) (int, bool) {
 		return 0, false
 	}
 	return publisherID, true
+}
+
+func (s *Store) CheckBookHash(hash string) (int, bool) {
+	stmt := `SELECT book_id FROM book_hash_link WHERE hash = ?`
+	args := []any{hash}
+
+	var bookID int
+	if err := s.metaDb.QueryRow(stmt, args...).Scan(&bookID); err != nil {
+		return 0, false
+	}
+	return bookID, true
+}
+
+func (s *Store) CheckBookStatus(bookID, userID int) bool {
+	stmt := `
+	    SELECT EXISTS(SELECT 1 FROM book_reading_status_link WHERE book_id = ? AND user_id = ?)
+	`
+	args := []any{bookID, userID}
+
+	var exists bool
+	if err := s.appDb.QueryRow(stmt, args...).Scan(&exists); err != nil {
+		return false
+	}
+
+	return exists
 }

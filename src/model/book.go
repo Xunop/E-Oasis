@@ -105,3 +105,24 @@ type BookPluginLink struct {
 	BookID int    `json:"book"`
 	Value  string `json:"val"`
 }
+
+// BookReadingStatusLink represents the reading status of a book for a user.
+type BookReadingStatusLink struct {
+	ID int `json:"id"`
+	// The book ID.
+	BookID int `json:"book"`
+	// The user ID.
+	UserID int `json:"user"`
+	// The reading status.
+	Status int `json:"status"`
+	// The percentage of the book read.
+	Percentage int `json:"percentage"`
+	// The page number of the book.
+	Page int `json:"page"`
+	// The CurPage is current reading page.
+	CurPage int `json:"cur_page"`
+	// The total reading duration in seconds.
+	Duration int `json:"duration"`
+	// The LastRead is the last time the book was read.
+    LastRead string `json:"last_read"`
+}

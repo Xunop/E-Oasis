@@ -1,11 +1,14 @@
 package worker // import "github.com/Xunop/e-oasis/worker"
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -13,6 +16,8 @@ import (
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
 	"github.com/Xunop/e-oasis/store"
+	"github.com/Xunop/e-oasis/util/parsers/epub"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -68,6 +73,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 
 		uid := job.UserID
 		fileHeader := job.Item.(*multipart.FileHeader)
+		// Open the file
 		file, err := fileHeader.Open()
 		if err != nil {
 			log.Error("Error opening file", zap.Error(err))
@@ -259,5 +265,51 @@ func SaveBookMeta(s *store.Store) {
 		log.Debug("Add book user link response", zap.Any("response", bookUserLinkRes))
 		// _, err := w.store.AddLanguage(&model.Language{Name: bookLanguage})
 		// w.store.AddBookAuthorLink(&model.BookAuthorLink{BookID: returnBook.ID, AuthorID: 1})
+	}
+}
+
+// generateBookHash generate the hash of the book
+func generateBookHash(book string) (string, error) {
+	bookType := filepath.Ext(book)
+	switch bookType {
+	case ".epub":
+		epub, err := epub.Open(book)
+		if err != nil {
+			log.Error("Error opening epub", zap.Error(err))
+			return "", err
+		}
+		defer epub.Close()
+
+		content := ""
+
+		// Metadata
+		content += epub.GetTitle()
+		content += epub.GetAuthor()
+		content += epub.GetDate()
+		content += epub.GetPublisher()
+		content += epub.GetDescription()
+
+		items := epub.Opf.Manifest
+		for _, item := range items {
+			if item.MediaType != "application/xhtml+xml" {
+				continue
+			}
+			data, err := epub.GetContent(item.Href)
+			if err != nil {
+				return "", err
+			}
+			content += string(data)
+		}
+
+		hash := sha256.New()
+		_, err = hash.Write([]byte(content))
+		if err != nil {
+			log.Error("Error writing hash", zap.Error(err))
+			return "", err
+		}
+		// hash := sha256.Sum256([]byte(content))
+		return hex.EncodeToString(hash.Sum(nil)), nil
+	default:
+		return "", errors.New("Unsupported book type")
 	}
 }

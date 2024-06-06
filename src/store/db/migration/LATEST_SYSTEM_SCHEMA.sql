@@ -108,15 +108,17 @@ CREATE TABLE duration_info (
 -- reading_status
 CREATE TABLE reading_status (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
+    user_id INTEGER NOT NULL,
     book_id INTEGER NOT NULL,
-    last_read_time BIGINT NOT NULL,
-    reading_duration INTEGER NOT NULL DEFAULT 0,
-    cur_page INTEGER NOT NULL DEFAULT -1,
-    status SMALLINT,
-    FOREIGN KEY(user_id) REFERENCES user (id)
+    last_read_time BIGINT,
+    duration INTEGER NOT NULL DEFAULT 0,
+    cur_page INTEGER NOT NULL DEFAULT 0,
+    percentage INTEGER NOT NULL DEFAULT 0,
+    status SMALLINT NOT NULL DEFAULT 0,
+    page INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (user_id, book_id),
+    FOREIGN KEY (user_id) REFERENCES user (id)
 );
-
 -- tag
 CREATE TABLE tag (
   name TEXT NOT NULL,
@@ -133,4 +135,11 @@ CREATE TABLE job (
   status TEXT NOT NULL DEFAULT 'pending',
   FOREIGN KEY (user_id) REFERENCES user(id),
   CONSTRAINT path_length CHECK (LENGTH(path) <= 255)
+);
+
+-- book_hash_link
+CREATE TABLE book_hash_link (
+  book_id INTEGER NOT NULL,
+  hash TEXT NOT NULL,
+  PRIMARY KEY (book_id, hash)
 );

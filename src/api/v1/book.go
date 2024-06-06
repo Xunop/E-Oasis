@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/Xunop/e-oasis/model"
 	"github.com/Xunop/e-oasis/util"
 	"github.com/Xunop/e-oasis/worker"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -170,4 +172,37 @@ func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
 	h.store.BookCache.Delete(bookID)
 
 	response.NoContent(w, r)
+}
+
+func (h *Handler) setBookStatus(w http.ResponseWriter, r *http.Request) {
+	var status model.BookReadingStatusLink
+	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
+		log.Error("Failed to decode request body", zap.Error(err))
+		response.BadRequest(w, r, err)
+	}
+	userID, err := strconv.Atoi(request.GetUserID(r))
+	if err != nil {
+		log.Error("Failed to get user ID", zap.Error(err))
+		response.BadRequest(w, r, err)
+	}
+	status.UserID = userID
+
+	// Check if the book exists
+	if !h.store.CheckBook(status.BookID) {
+		log.Debug("Book not found", zap.Int("bookID", status.BookID))
+		response.BadRequest(w, r, errors.New("Book not found"))
+	}
+
+	newStatus, err := h.store.SetBookStatus(&status)
+	if err != nil {
+		log.Error("Failed to set book status", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+	if newStatus == nil {
+		response.BadRequest(w, r, errors.New("Failed to set book status"))
+		return
+	}
+
+	response.OK(w, r, newStatus)
 }
