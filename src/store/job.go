@@ -20,12 +20,12 @@ func (s *Store) AddJob(job model.Job) (*model.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	var j model.Job
 	if err := tx.QueryRow(stmt, job.UserID, job.Path, job.Type, job.Status).Scan(
 		&j.ID, &j.UserID, &j.Path, &j.Type, &j.Status,
 	); err != nil {
+        tx.Rollback()
         return nil, err
     }
     if err := tx.Commit(); err != nil {

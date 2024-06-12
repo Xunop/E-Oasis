@@ -67,9 +67,9 @@ func execute(stmt string, d *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
 	if _, err := tx.Exec(stmt); err != nil {
+        tx.Rollback()
 		return errors.Wrap(err, "failed to execute statement")
 	}
 

@@ -149,7 +149,6 @@ func (s *Store) CreateUser(create *model.User) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	var user model.User
 	if err := tx.QueryRow(stmt, args...).Scan(
@@ -166,6 +165,7 @@ func (s *Store) CreateUser(create *model.User) (*model.User, error) {
 		&user.AvatarURL,
 		&user.Description,
 	); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 

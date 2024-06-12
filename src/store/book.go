@@ -44,12 +44,12 @@ func (s *Store) RemoveBook(find *model.FindBook) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
 
 	if _, err := tx.Exec(stmt, args...); err != nil {
+		tx.Rollback()
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -256,13 +256,13 @@ func (s *Store) RemoveBookByUserID(userID int, bookID ...int) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
 
 	rows, err := tx.Query(stmt, args...)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer rows.Close()
@@ -293,12 +293,12 @@ func (s *Store) RemoveBookByUserID(userID int, bookID ...int) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
 	stmt = `
 		DELETE FROM books
 		WHERE ` + strings.Join(where, " AND ")
 	if _, err = tx.Exec(stmt, args...); err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -343,7 +343,6 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
@@ -362,6 +361,7 @@ func (s *Store) AddBook(book *model.Book) (*model.Book, error) {
 		&newBook.HasCover,
 		&newBook.LastModified,
 	); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -393,7 +393,6 @@ func (s *Store) AddPublisher(publisher *model.Publisher) (*model.Publisher, erro
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
@@ -404,6 +403,7 @@ func (s *Store) AddPublisher(publisher *model.Publisher) (*model.Publisher, erro
 		&newPublisher.Name,
 		&newPublisher.Sort,
 	); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -427,13 +427,13 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
 
 	var newLanguage model.Language
 	if err := tx.QueryRow(stmt, args...).Scan(&newLanguage.ID, &newLanguage.LangCode); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return &newLanguage, nil
@@ -461,13 +461,13 @@ func (s *Store) AddAuthor(author *model.Author) (*model.Author, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
 
 	var newAuthor model.Author
 	if err := tx.QueryRow(stmt, args...).Scan(&newAuthor.ID, &newAuthor.Name, &newAuthor.Sort, &newAuthor.Link); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -495,13 +495,13 @@ func (s *Store) AddBookUserLink(create *model.BookUserLink) (*model.BookUserLink
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
 
 	var newLink model.BookUserLink
 	if err := tx.QueryRow(stmt, args...).Scan(&newLink.ID, &newLink.BookID, &newLink.UserID); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -549,12 +549,12 @@ func (s *Store) SetBookStatus(status *model.BookReadingStatusLink) (*model.BookR
 		log.Error("Failed to begin transaction", zap.Error(err))
 		return nil, err
 	}
-	defer tx.Rollback()
 
 	log.Debug("SQL query and args:")
 	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
 
 	if _, err := tx.Exec(stmt, args...); err != nil {
+		tx.Rollback()
 		log.Error("Failed to scan book reading status link", zap.Error(err))
 		return nil, err
 	}
