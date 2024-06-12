@@ -61,7 +61,7 @@ CREATE TABLE shelf (
 	display_order INTEGER NOT NULL COLLATE NOCASE,
 	order_reverse SMALLINT DEFAULT 0,
 	PRIMARY KEY (id),
-	FOREIGN KEY(user_id) REFERENCES user (id)
+	FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_shelf_user_id ON shelf (user_id);
@@ -74,7 +74,7 @@ CREATE TABLE book_shelf_link (
 	shelf_id INTEGER,
 	date_added BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
 	PRIMARY KEY (id),
-	FOREIGN KEY(shelf_id) REFERENCES shelf (id)
+	FOREIGN KEY(shelf_id) REFERENCES shelf (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_book_shelf_link_book_id ON book_shelf_link (book_id);
@@ -87,7 +87,7 @@ CREATE TABLE bookmark (
     book_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     tips TEXT,
-    FOREIGN KEY(user_id) REFERENCES user (id),
+    FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE,
     UNIQUE(position, book_id, user_id)
 );
 
@@ -102,7 +102,7 @@ CREATE TABLE duration_info (
     start_time BIGINT NOT NULL,
     read_duration INTEGER,
     percentage INTEGER,
-    FOREIGN KEY(user_id) REFERENCES user (id)
+    FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE
 );
 
 -- reading_status
@@ -117,7 +117,7 @@ CREATE TABLE reading_status (
     status SMALLINT NOT NULL DEFAULT 0,
     page INTEGER NOT NULL DEFAULT 0,
     UNIQUE (user_id, book_id),
-    FOREIGN KEY (user_id) REFERENCES user (id)
+    FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE
 );
 -- tag
 CREATE TABLE tag (
