@@ -241,4 +241,28 @@ func (h *Handler) upsetBookStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getBookStatus(w http.ResponseWriter, r *http.Request) {
+    bookID := request.RouteIntParam(r, "bookID")
+    userID := request.RouteIntParam(r, "userID")
+
+    currentUserID, err := strconv.Atoi(request.GetUserID(r))
+    if err != nil {
+		log.Error("Failed to get user ID", zap.Error(err))
+		response.BadRequest(w, r, err)
+		return
+	}
+
+	if currentUserID != userID {
+		log.Error("User ID not match", zap.Int("userID", currentUserID), zap.Int("requestUserID", userID))
+		response.BadRequest(w, r, errors.New("User ID not match"))
+		return
+	}
+
+	status, err := h.store.GetBookStatus(bookID, userID)
+	if err != nil {
+		log.Error("Failed to get book status", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+
+	response.OK(w, r, status)
 }

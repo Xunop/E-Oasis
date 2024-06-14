@@ -117,6 +117,8 @@ CREATE TABLE reading_status (
     status SMALLINT NOT NULL DEFAULT 0,
     page INTEGER NOT NULL DEFAULT 0,
     UNIQUE (user_id, book_id),
+    CHECK (cur_page <= page),
+    CHECK (percentage <= 100),
     FOREIGN KEY(user_id) REFERENCES user (id) ON DELETE CASCADE
 );
 -- tag

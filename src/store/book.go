@@ -570,6 +570,42 @@ func (s *Store) UpsetBookStatus(status *model.BookReadingStatusLink) (*model.Boo
 	return status, nil
 }
 
+func (s *Store) GetBookStatus(bookID, userID int) (*model.BookReadingStatusLink, error) {
+	stmt := `
+   		SELECT
+   	        id,
+   	        book_id,
+   	        user_id,
+   	        last_read_time,
+   	        duration,
+   	        cur_page,
+   	        percentage,
+   	        status,
+   	        page
+   	    FROM reading_status WHERE book_id = ? AND user_id = ?
+	`
+	args := []any{bookID, userID}
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	var status model.BookReadingStatusLink
+	if err := s.appDb.QueryRow(stmt, args...).Scan(
+		&status.ID,
+		&status.BookID,
+		&status.UserID,
+		&status.LastRead,
+		&status.Duration,
+		&status.CurPage,
+		&status.Percentage,
+		&status.Status,
+		&status.Page,
+	); err != nil {
+		return nil, err
+	}
+	return &status, nil
+}
+
 func (s *Store) CheckBook(bookID int) bool {
 	stmt := `
 		SELECT EXISTS(SELECT 1 FROM books WHERE id = ?)
