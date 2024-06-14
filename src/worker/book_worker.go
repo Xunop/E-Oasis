@@ -78,6 +78,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		file, err := fileHeader.Open()
 		if err != nil {
 			log.Error("Error opening file", zap.Error(err))
+			ErrorChan <- err
 			continue
 		}
 		defer file.Close()
@@ -86,24 +87,32 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		_, err = file.Read(buff)
 		if err != nil {
 			log.Error("Error reading file", zap.Error(err))
+			ErrorChan <- err
 			continue
 		}
 
 		fileType := http.DetectContentType(buff)
 		if !config.CheckSupportedTypes(fileType) {
 			log.Error("Unsupported file type", zap.String("file_type", fileType))
+			ErrorChan <- err
 			continue
 		}
 
 		_, err = file.Seek(0, io.SeekStart)
 		if err != nil {
 			log.Error("Error seeking file", zap.Error(err))
+			ErrorChan <- err
 			continue
 		}
 
 		// Check if the user has a folder
 		if _, err := os.Stat(job.Path); os.IsNotExist(err) {
 			err = os.MkdirAll(job.Path, os.ModePerm)
+			if err != nil {
+				log.Error("Error creating folder", zap.Error(err))
+				ErrorChan <- err
+				continue
+			}
 		}
 
 		filePath := fmt.Sprintf("%s/%s", job.Path, job.Item.(*multipart.FileHeader).Filename)
@@ -113,6 +122,8 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		f, err := os.Create(filePath)
 		if err != nil {
 			log.Error("Error creating file", zap.Error(err))
+			ErrorChan <- err
+			os.RemoveAll(job.Path)
 			continue
 		}
 		defer f.Close()
@@ -120,6 +131,8 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		_, err = io.Copy(f, file)
 		if err != nil {
 			log.Error("Error copying file", zap.Error(err))
+			ErrorChan <- err
+			os.RemoveAll(job.Path)
 			continue
 		}
 
@@ -127,10 +140,12 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		j, err := w.store.AddJob(job)
 		if err != nil {
 			log.Error("Error adding job", zap.Error(err))
-			continue
+			// ErrorChan <- err
+			// continue
+		} else {
+			w.store.JobCache.Store(j.ID, &j)
 		}
 
-		w.store.JobCache.Store(j.ID, &j)
 		// Next Parse the book
 		// File path is the path of the book: /path/uid/books/book.epub
 		uploadDone <- job
@@ -189,6 +204,8 @@ func (w *BookParseWorker) Run() {
 		bookMeta, err := ParseBook(filePath)
 		if err != nil {
 			log.Error("Parse book error", zap.String("Book", filePath), zap.Error(err))
+			ErrorChan <- err
+			os.RemoveAll(job.Path)
 			continue
 		}
 
@@ -221,6 +238,7 @@ func SaveBookMeta(s *store.Store) {
 		returnBook, err := s.AddBook(newBook)
 		if err != nil {
 			log.Error("Error adding book", zap.Error(err))
+			ErrorChan <- err
 			continue
 		}
 		s.BookCache.Store(returnBook.ID, returnBook)

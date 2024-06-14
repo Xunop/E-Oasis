@@ -63,6 +63,12 @@ func (h *Handler) addBookBatch(w http.ResponseWriter, r *http.Request) {
 
 		fileBase := filepath.Base(file.Filename)
 		ext := filepath.Ext(fileBase)
+		// Check if the file type is supported
+		if !config.CheckSupportedTypes(ext[1:]) {
+			log.Error("Unsupported file type", zap.String("file_type", ext))
+			response.BadRequest(w, r, fmt.Errorf("Unsupported file type: %s", ext[1:]))
+			return
+		}
 		bookDir := strings.TrimSuffix(fileBase, ext)
 		bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookDir)
 		bookPath = util.GenerateNewDirName(bookPath)
@@ -88,6 +94,7 @@ func (h *Handler) addBookBatch(w http.ResponseWriter, r *http.Request) {
 // addBookSingle parse the book and return to user
 // User can modify book metadata(title, author, cover, etc), so when we parse book, we need to return metadata to user.
 // Besides, we can batch upload books, user don't need to modify book metadata.
+// job -> upload -> parse -> return metadata
 func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(config.Opts.MaxUploadSize << 20); err != nil {
 		log.Error("Max upload size exceeded", zap.Error(err))
@@ -139,31 +146,29 @@ func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 
 	// FIXME: This is a blocking operation, need to be optimized
 	// If goruntine has error, we can't catch it
-	// select {
-	// case <-worker.MetaSingle:
-	// 	log.Debug("MetaSingleDone")
-	// case <-worker.MetaSingleError:
-	// 	log.Error("MetaSingleError")
-	// 	response.ServerError(w, r, errors.New("Failed to parse book"))
-	// 	return
-	// }
-	bookMeta := <-worker.MetaSingle
+	select {
+	case bookMeta := <-worker.MetaSingle:
+		log.Debug("MetaSingleDone")
 
-	// When We parse the book, we need to save the book metadata
-	// Save the book metadata
-	newBook := &model.Book{
-		Title:        bookMeta.Book.Title,
-		SortTitle:    bookMeta.Book.SortTitle,
-		PublishDate:  bookMeta.Book.PublishDate,
-		AuthorSort:   bookMeta.Book.AuthorSort,
-		ISBN:         bookMeta.Book.ISBN,
-		Path:         bookMeta.Book.Path,
-		UUID:         bookMeta.Book.UUID,
-		HasCover:     bookMeta.Book.HasCover,
-		LastModified: bookMeta.Book.LastModified,
+		// When We parse the book, we need to save the book metadata
+		// Save the book metadata
+		newBook := &model.Book{
+			Title:        bookMeta.Book.Title,
+			SortTitle:    bookMeta.Book.SortTitle,
+			PublishDate:  bookMeta.Book.PublishDate,
+			AuthorSort:   bookMeta.Book.AuthorSort,
+			ISBN:         bookMeta.Book.ISBN,
+			Path:         bookMeta.Book.Path,
+			UUID:         bookMeta.Book.UUID,
+			HasCover:     bookMeta.Book.HasCover,
+			LastModified: bookMeta.Book.LastModified,
+		}
+		response.OK(w, r, newBook)
+		return
+	case err := <-worker.ErrorChan:
+		response.ServerError(w, r, err)
+		return
 	}
-	response.OK(w, r, newBook)
-	return
 }
 
 // TODO: Add batch delete and delete link data
