@@ -66,7 +66,7 @@ func TestSetBookStatus(t *testing.T) {
 		LastRead:   "2021-10-10",
 	}
 
-	newStatus, err := s.SetBookStatus(bookStatus)
+	newStatus, err := s.UpsetBookStatus(bookStatus)
 	if err != nil {
 		t.Fatalf("Failed to set book status: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestSetBookStatus(t *testing.T) {
 		LastRead:   "2021-12-10",
 	}
 
-	newStatus, err = s.SetBookStatus(bookStatus)
+	newStatus, err = s.UpsetBookStatus(bookStatus)
 	if err != nil {
 		t.Fatalf("Failed to set book status: %v", err)
 	}

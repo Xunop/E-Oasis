@@ -90,3 +90,18 @@ func ParseFile(file string) (*Options, error) {
 	}
 	return Opts, nil
 }
+
+// CheckSupportedTypes checks if the file type is supported
+func CheckSupportedTypes(fileType string) bool {
+	if len(Opts.SupportedTypes) == 0 {
+		return false
+	}
+
+	for _, t := range Opts.SupportedTypes {
+		if t == fileType {
+			return true
+		}
+	}
+
+	return false
+}

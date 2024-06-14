@@ -105,10 +105,19 @@ func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("Filed to get user ID", zap.Error(err))
 		response.BadRequest(w, r, err)
+		return
 	}
 
+	// Check if the file type is supported
 	fileBase := filepath.Base(files[0].Filename)
 	ext := filepath.Ext(fileBase)
+	ext = ext[1:]
+	if !config.CheckSupportedTypes(ext) {
+		log.Error("Unsupported file type", zap.String("file_type", ext))
+		response.BadRequest(w, r, fmt.Errorf("Unsupported file type"))
+		return
+	}
+
 	bookFileName := strings.TrimSuffix(fileBase, ext)
 	bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookFileName)
 	bookPath = util.GenerateNewDirName(bookPath)
@@ -127,6 +136,16 @@ func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// FIXME: This is a blocking operation, need to be optimized
+	// If goruntine has error, we can't catch it
+	// select {
+	// case <-worker.MetaSingle:
+	// 	log.Debug("MetaSingleDone")
+	// case <-worker.MetaSingleError:
+	// 	log.Error("MetaSingleError")
+	// 	response.ServerError(w, r, errors.New("Failed to parse book"))
+	// 	return
+	// }
 	bookMeta := <-worker.MetaSingle
 
 	// When We parse the book, we need to save the book metadata
@@ -174,26 +193,40 @@ func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
 	response.NoContent(w, r)
 }
 
-func (h *Handler) setBookStatus(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) upsetBookStatus(w http.ResponseWriter, r *http.Request) {
 	var status model.BookReadingStatusLink
 	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
 		log.Error("Failed to decode request body", zap.Error(err))
 		response.BadRequest(w, r, err)
+		return
 	}
+	// userID is the user who set the status
 	userID, err := strconv.Atoi(request.GetUserID(r))
 	if err != nil {
 		log.Error("Failed to get user ID", zap.Error(err))
 		response.BadRequest(w, r, err)
+		return
+	}
+
+	// Check if the user ID match
+	statusUserID := request.RouteIntParam(r, "userID")
+	if userID != statusUserID {
+		log.Error("User ID not match", zap.Int("userID", userID), zap.Int("requestUserID", statusUserID))
+		response.BadRequest(w, r, errors.New("User ID not match"))
+		return
 	}
 	status.UserID = userID
 
 	// Check if the book exists
+	bookID := request.RouteIntParam(r, "bookID")
+	status.BookID = bookID
 	if !h.store.CheckBook(status.BookID) {
 		log.Debug("Book not found", zap.Int("bookID", status.BookID))
 		response.BadRequest(w, r, errors.New("Book not found"))
+		return
 	}
 
-	newStatus, err := h.store.SetBookStatus(&status)
+	newStatus, err := h.store.UpsetBookStatus(&status)
 	if err != nil {
 		log.Error("Failed to set book status", zap.Error(err))
 		response.ServerError(w, r, err)
@@ -205,4 +238,7 @@ func (h *Handler) setBookStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, newStatus)
+}
+
+func (h *Handler) getBookStatus(w http.ResponseWriter, r *http.Request) {
 }

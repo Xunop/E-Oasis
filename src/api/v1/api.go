@@ -54,4 +54,9 @@ func Server(router *mux.Router, store *store.Store, pools... worker.WorkPool) {
 	sr.HandleFunc("/book/{id}", handler.deleteBook).Methods(http.MethodDelete)
 	// sr.HandleFunc("/book/{id}", handler.updateBook).Methods(http.MethodPut)
 	// sr.HandleFunc("/book/{id}", handler.getBook).Methods(http.MethodGet)
+	// Modify book status is only for user self
+	sr.HandleFunc("/bookStatus/{userID}/{bookID}", handler.upsetBookStatus).Methods(http.MethodPost)
+	sr.HandleFunc("/bookStatus/{userID}/{bookID}", handler.upsetBookStatus).Methods(http.MethodPut)
+	// Get book status can be accessed if user set the book to public
+	sr.HandleFunc("/bookStatus/{userID}/{bookID}", handler.getBookStatus).Methods(http.MethodGet)
 }

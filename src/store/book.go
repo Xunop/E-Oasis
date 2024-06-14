@@ -510,8 +510,10 @@ func (s *Store) AddBookUserLink(create *model.BookUserLink) (*model.BookUserLink
 	return &newLink, nil
 }
 
-// SetBookStatus set or update book reading status
-func (s *Store) SetBookStatus(status *model.BookReadingStatusLink) (*model.BookReadingStatusLink, error) {
+// UpsetBookStatus upset book status
+// If the book status is not exist, insert new record
+// If the book status is exist, update the record, except for book_id, user_id, page
+func (s *Store) UpsetBookStatus(status *model.BookReadingStatusLink) (*model.BookReadingStatusLink, error) {
 	// Insert or update
 	stmt := `
 	INSERT INTO reading_status (
@@ -563,6 +565,8 @@ func (s *Store) SetBookStatus(status *model.BookReadingStatusLink) (*model.BookR
 		return nil, err
 	}
 
+	// FIXME: status.ID is not set
+	status.ID = -1
 	return status, nil
 }
 

@@ -2,7 +2,7 @@ package config
 
 const (
 	defalutLogFile                = "logs.log"
-	defaultLogLevel               = "info"
+	defaultLogLevel               = "debug"
 	defaultLogFileMaxSize         = 20
 	defaultLogFileMaxBackups      = 3
 	defaultLogFileMaxAge          = 28
@@ -79,7 +79,7 @@ func GetDefaultOptions() *Options {
 		Host:                   defaultHost,
 		Data:                   defaultData,
 		WorkerPoolSize:         defaultWorkerPoolSize,
-		SupportedTypes:         []string{defaultSupportedTypes},
+		SupportedTypes:         []string{defaultSupportedTypes, "epub"},
 		MetricsCollector:       defaultMetricsCollector,
 		MetricsRefreshInterval: defaultMetricsRefreshInterval,
 		MetricsAllowedNetworks: []string{defaultMetricsAllowedNetworks},
