@@ -25,6 +25,7 @@ var (
 	uploadDone = make(chan model.Job)
 	metaBatch  = make(chan *model.BookMeta, 10)
 	MetaSingle = make(chan model.BookMeta, 1)
+	ErrorChan  = make(chan error, 1)
 )
 
 type BookUploadPool struct {
@@ -89,8 +90,7 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		}
 
 		fileType := http.DetectContentType(buff)
-		supportType := config.Opts.SupportedTypes
-		if !isSupportedType(fileType, supportType) {
+		if !config.CheckSupportedTypes(fileType) {
 			log.Error("Unsupported file type", zap.String("file_type", fileType))
 			continue
 		}
@@ -137,16 +137,6 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 			zap.Int("user_id", uid),
 			zap.Int("job_id", j.ID))
 	}
-}
-
-func isSupportedType(fileType string, supportType []string) bool {
-	for _, t := range supportType {
-		log.Debug("Checking file type", zap.String("file_type", t), zap.String("supported_type", fileType))
-		if t == fileType {
-			return true
-		}
-	}
-	return false
 }
 
 type BookParsePool struct {

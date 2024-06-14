@@ -125,3 +125,13 @@ func GenerateNewDirName(filePath string) string {
 	newFileName := fmt.Sprintf("%s_%d", base, index)
 	return filepath.Join(dir, newFileName)
 }
+
+// IsChinese checks if the string contains Chinese characters
+func IsChinese(s string) bool {
+	for _, r := range s {
+		if r >= 0x4e00 && r <= 0x9fff {
+			return true
+		}
+	}
+	return false
+}
