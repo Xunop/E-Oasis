@@ -37,7 +37,7 @@ func parseEpub(path string) (*model.BookMeta, error) {
 	hasCover := false
 	// Book cover always in book directory, but don't know the extension of the cover(jpg/png?)
 	bookCover, err := book.GetCover(filepath.Dir(path))
-	if bookCover != "" && err != nil {
+	if bookCover != "" && err == nil {
 		hasCover = true
 	}
 	bookUUID := book.GetUUID()

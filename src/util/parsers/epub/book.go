@@ -141,7 +141,7 @@ func (p *Book) GetUUID() string {
 	return ""
 }
 
-// GetCover copy the cover image to the destination
+// GetCover copy the cover image to the destination and return the path
 func (p *Book) GetCover(dest string) (string, error) {
 	var filename string
 	for _, meta := range p.Opf.Metadata.Meta {
