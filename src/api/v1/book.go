@@ -111,16 +111,17 @@ func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 	// Check if the file type is supported
 	fileBase := filepath.Base(files[0].Filename)
 	ext := filepath.Ext(fileBase)
-	ext = ext[1:]
-	if !config.CheckSupportedTypes(ext) {
+	if !config.CheckSupportedTypes(ext[1:]) {
 		log.Error("Unsupported file type", zap.String("file_type", ext))
 		response.BadRequest(w, r, fmt.Errorf("Unsupported file type"))
 		return
 	}
 
 	bookFileName := strings.TrimSuffix(fileBase, ext)
+	log.Debug("Book file name", zap.String("file_name", bookFileName))
 	bookPath := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, uid, bookFileName)
 	bookPath = util.GenerateNewDirName(bookPath)
+	log.Debug("Book path", zap.String("path", bookPath))
 	job := model.Job{
 		UserID: uid,
 		Path:   bookPath,
@@ -241,11 +242,11 @@ func (h *Handler) upsetBookStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getBookStatus(w http.ResponseWriter, r *http.Request) {
-    bookID := request.RouteIntParam(r, "bookID")
-    userID := request.RouteIntParam(r, "userID")
+	bookID := request.RouteIntParam(r, "bookID")
+	userID := request.RouteIntParam(r, "userID")
 
-    currentUserID, err := strconv.Atoi(request.GetUserID(r))
-    if err != nil {
+	currentUserID, err := strconv.Atoi(request.GetUserID(r))
+	if err != nil {
 		log.Error("Failed to get user ID", zap.Error(err))
 		response.BadRequest(w, r, err)
 		return

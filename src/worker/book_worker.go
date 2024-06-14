@@ -107,6 +107,9 @@ func (w *BookUploadWorker) Run(c <-chan model.Job) {
 		}
 
 		filePath := fmt.Sprintf("%s/%s", job.Path, job.Item.(*multipart.FileHeader).Filename)
+
+		log.Debug("File path", zap.String("path", filePath))
+
 		f, err := os.Create(filePath)
 		if err != nil {
 			log.Error("Error creating file", zap.Error(err))

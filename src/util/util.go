@@ -106,6 +106,7 @@ func GenerateNewDirName(filePath string) string {
 	dir := filepath.Dir(filePath)
 	base := filepath.Base(filePath)
 
+	// If the file path matches the pattern
 	existingDirs, err := filepath.Glob(filepath.Join(dir, base+"_*[0-9]"))
 	if err != nil {
 		return filePath
@@ -116,8 +117,8 @@ func GenerateNewDirName(filePath string) string {
 		existingBase := filepath.Base(existingDir)
 		// existingName := strings.TrimSuffix(existingBase, ext)
 		var existingIndex int
-		base = strings.Split(existingBase, "_")[0]
-		existingIndex, err = strconv.Atoi(strings.Split(existingBase, "_")[1])
+		lastIndex := len(strings.Split(existingBase, "_")) - 1
+		existingIndex, err = strconv.Atoi(strings.Split(existingBase, "_")[lastIndex])
 		if err == nil && existingIndex >= index {
 			index = existingIndex + 1
 		}
