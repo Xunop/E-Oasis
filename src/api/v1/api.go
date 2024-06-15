@@ -59,4 +59,5 @@ func Server(router *mux.Router, store *store.Store, pools... worker.WorkPool) {
 	sr.HandleFunc("/bookStatus/{userID}/{bookID}", handler.upsetBookStatus).Methods(http.MethodPut)
 	// Get book status can be accessed if user set the book to public
 	sr.HandleFunc("/bookStatus/{userID}/{bookID}", handler.getBookStatus).Methods(http.MethodGet)
+	sr.HandleFunc("/covers/{bookID}", handler.getCover).Methods(http.MethodGet)
 }

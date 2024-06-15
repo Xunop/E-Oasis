@@ -21,3 +21,8 @@ func RouteIntParam(r *http.Request, param string) int {
 
 	return value
 }
+
+func RouteStringParam(r *http.Request, param string) string {
+	vars := mux.Vars(r)
+	return vars[param]
+}

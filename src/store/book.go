@@ -10,8 +10,8 @@ import (
 )
 
 func (s *Store) GetBook(find *model.FindBook) (*model.Book, error) {
-	if find.ID != nil {
-		if cache, ok := s.BookCache.Load(*find.ID); ok {
+	if find.BookID != nil {
+		if cache, ok := s.BookCache.Load(*find.BookID); ok {
 			return cache.(*model.Book), nil
 		}
 	}
@@ -65,7 +65,7 @@ func (s *Store) ListBooks(find *model.FindBook) ([]*model.Book, error) {
 
 	where, args := []string{"1 = 1"}, []any{}
 
-	if v := find.ID; v != nil {
+	if v := find.BookID; v != nil {
 		where, args = append(where, "id = ?"), append(args, *v)
 	}
 	if v := find.Title; v != nil {

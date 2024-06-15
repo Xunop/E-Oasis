@@ -21,7 +21,6 @@ type Book struct {
 }
 
 type FindBook struct {
-	ID     *int    `json:"id"`
 	Title  *string `json:"title"`
 	UserID *int    `json:"user_id"`
 	BookID *int    `json:"book_id"`

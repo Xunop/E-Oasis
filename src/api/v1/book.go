@@ -272,3 +272,29 @@ func (h *Handler) getBookStatus(w http.ResponseWriter, r *http.Request) {
 
 	response.OK(w, r, status)
 }
+
+func (h *Handler) getCover(w http.ResponseWriter, r *http.Request) {
+	bookID := request.RouteIntParam(r, "bookID")
+
+	book, err := h.store.GetBook(&model.FindBook{BookID: &bookID})
+	if err != nil {
+		log.Error("Failed to get book", zap.Int("book_id", bookID), zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+	dir := filepath.Dir(book.Path)
+
+	var covers []string
+	if book.HasCover {
+		covers, err = filepath.Glob(fmt.Sprintf("%s/cover.*", dir))
+		if err != nil {
+			log.Error("Failed to get cover", zap.Int("book_id", bookID), zap.String("cover_dir", dir), zap.Error(err))
+			response.ServerError(w, r, err)
+			return
+		}
+		http.ServeFile(w, r, covers[0])
+	} else {
+		// Use default cover
+		// cover = fmt.Sprintf("%s/cover.jpg", dir)
+	}
+}
