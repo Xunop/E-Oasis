@@ -286,7 +286,7 @@ func (h *Handler) getCover(w http.ResponseWriter, r *http.Request) {
 
 	var covers []string
 	if book.HasCover {
-		covers, err = filepath.Glob(fmt.Sprintf("%s/cover.*", dir))
+		covers, err = filepath.Glob(fmt.Sprintf("%s/cover.webp", dir))
 		if err != nil {
 			log.Error("Failed to get cover", zap.Int("book_id", bookID), zap.String("cover_dir", dir), zap.Error(err))
 			response.ServerError(w, r, err)

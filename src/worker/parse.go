@@ -2,6 +2,7 @@ package worker // import "github.com/Xunop/e-oasis/worker"
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -40,6 +41,10 @@ func parseEpub(path string) (*model.BookMeta, error) {
 	if bookCover != "" && err == nil {
 		hasCover = true
 	}
+	// Cover to webp
+	util.ImageToWebp(bookCover, 75)
+	// Remove the original cover
+	go os.Remove(bookCover)
 	bookUUID := book.GetUUID()
 	bookISBN := book.GetISBN()
 	bookDate := book.GetDate()
@@ -51,19 +56,9 @@ func parseEpub(path string) (*model.BookMeta, error) {
 	// bookLanguage := book.GetLanguage()
 
 	log.Debug("Book parse worker:", zap.String("Book title", bookTitle), zap.String("Book author", bookAuthor))
+
+	sortAuthor := util.AuthorSort(bookAuthor)
 	sortTitle := util.TitleSort(bookTitle)
-	// If author is chinese, sort by pinyin
-	// if util.IsChinese(bookAuthor) {
-	// 	bookAuthor = util.Pinyin(bookAuthor)
-	// }
-	var sortAuthor string
-    if util.IsChinese(bookAuthor) {
-    	// TODO: use pinyin to sort author
-		// sortAuthor = util.Pinyin(bookAuthor)
-		sortAuthor = bookAuthor
-	} else {
-	    sortAuthor = util.GetSortedAuthor(bookAuthor)
-	}
 
 	log.Debug("Book title: %s, Book author: %s", zap.String("title", sortTitle), zap.String("author", sortAuthor))
 

@@ -108,6 +108,8 @@ func (c *Concatenate) WindowInverse(ctx *sqlite.FunctionContext, args []driver.V
 func (c *Concatenate) Final(ctx *sqlite.FunctionContext) {
 }
 
+// TitleSort is a function to sort the title
+// Example: The Great Gatsby -> Great Gatsby, The
 func TitleSort(title string) string {
 	// calibre sort stuff
 	// ^(A|The|An|Der|Die|Das|Den|Ein|Eine|Einen|Dem|Des|Einem|Eines|Le|La|Les|L\'|Un|Une)\s+
@@ -119,7 +121,11 @@ func TitleSort(title string) string {
 	return strings.TrimSpace(title)
 }
 
-func GetSortedAuthor(value string) string {
+func AuthorSort(value string) string {
+	if IsChinese(value) {
+		return authorSortByPinyin(value)
+	}
+
 	var value2 string
 	regexes := []string{"^(JR|SR)\\.?$", "^I{1,3}\\.?$", "^IV\\.?$"}
 	combined := "(" + strings.Join(regexes, "|") + ")"
@@ -142,6 +148,10 @@ func GetSortedAuthor(value string) string {
 	}
 
 	return value2
+}
+
+func authorSortByPinyin(value string) string {
+	return value
 }
 
 func UUID4() (string, error) {

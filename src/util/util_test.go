@@ -2,7 +2,12 @@ package util
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
 	"os"
+	"sync"
 	"testing"
 )
 
@@ -62,4 +67,98 @@ func TestGenerateNewDirName(t *testing.T) {
 			t.Errorf("Error create new dir: %s, err: %v", newDir, err)
 		}
 	}
+}
+
+// createTempImage creates a temporary image file for testing purposes.
+func createTempImage(extension string) (string, error) {
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 100; x++ {
+			img.Set(x, y, color.RGBA{uint8(x), uint8(y), 0, 255})
+		}
+	}
+
+	tempFile, err := os.CreateTemp("", "test-*."+extension)
+	if err != nil {
+		return "", err
+	}
+	defer tempFile.Close()
+
+	switch extension {
+	case "jpg", "jpeg":
+		err = jpeg.Encode(tempFile, img, nil)
+	case "png":
+		err = png.Encode(tempFile, img)
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	return tempFile.Name(), nil
+}
+
+func TestImageToWebp(t *testing.T) {
+	formats := []string{"jpg", "jpeg", "png"}
+
+	for _, format := range formats {
+		t.Run(fmt.Sprintf("Test %s to WebP", format), func(t *testing.T) {
+			tempFile, err := createTempImage(format)
+			if err != nil {
+				t.Fatalf("Failed to create temporary %s file: %v", format, err)
+			}
+			defer os.Remove(tempFile)
+
+			done := make(chan bool)
+
+			go func(tempFile string) {
+				defer close(done)
+				// 75 is the quality of the WebP image
+				outputFileName := ImageToWebp(tempFile, 75)
+				if outputFileName == "" {
+					t.Error("Expected output file name, got empty string")
+					return
+				}
+
+				if _, err := os.Stat(outputFileName); os.IsNotExist(err) {
+					t.Errorf("Expected WebP file %s to exist, but it does not", outputFileName)
+				} else {
+					os.Remove(outputFileName)
+				}
+			}(tempFile)
+
+			<-done
+		})
+	}
+}
+
+func TestImageToWebpConcurrent(t *testing.T) {
+	waitGroup := sync.WaitGroup{}
+
+	waitGroup.Add(10)
+	for i := 1; i <= 10; i++ {
+
+		tempFile, err := createTempImage("jpg")
+		if err != nil {
+			t.Fatalf("Failed to create temporary %s file: %v", "jpg", err)
+		}
+
+		go func(i int) {
+			defer waitGroup.Done()
+			outputFileName := ImageToWebp(tempFile, 75)
+			if outputFileName == "" {
+				t.Error("Expected output file name, got empty string")
+				return
+			}
+
+			if _, err := os.Stat(outputFileName); os.IsNotExist(err) {
+				t.Errorf("Expected WebP file %s to exist, but it does not", outputFileName)
+			} else {
+				// Remove file
+				os.Remove(outputFileName)
+			}
+		}(i)
+	}
+
+	waitGroup.Wait()
 }

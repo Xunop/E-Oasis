@@ -3,14 +3,19 @@ package util
 import (
 	"crypto/rand"
 	"fmt"
+	"image"
+	_ "image/jpeg" // Register the JPEG format
+	_ "image/png" // Register the PNG format
 	"math/big"
 	"net/mail"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/google/uuid"
+    "github.com/chai2010/webp"
 )
 
 // ConvertStringToInt32 converts a string to int32.
@@ -130,9 +135,46 @@ func GenerateNewDirName(filePath string) string {
 // IsChinese checks if the string contains Chinese characters
 func IsChinese(s string) bool {
 	for _, r := range s {
-		if r >= 0x4e00 && r <= 0x9fff {
+		if unicode.Is(unicode.Scripts["Han"], r) {
 			return true
 		}
 	}
 	return false
+}
+
+// ImageToWebp converts an image to webp format.
+// quality is a float32 value between 0 and 100.
+// I recommend using a quality of 75. It is a good balance between quality and file size.
+func ImageToWebp(src string, quality float32) string {
+    file, err := os.Open(src)
+    if err != nil {
+        fmt.Println("Error opening source file:", err)
+        return ""
+    }
+    defer file.Close()
+
+    img, _, err := image.Decode(file)
+    if err != nil {
+        fmt.Println("Error decoding image:", err)
+        return ""
+    }
+
+    // Remove extension from file name
+    fileName := strings.TrimSuffix(src, filepath.Ext(src))
+    outputFileName := fileName + ".webp"
+    outputFile, err := os.Create(outputFileName)
+    if err != nil {
+        fmt.Println("Error creating output file:", err)
+        return ""
+    }
+    defer outputFile.Close()
+
+	// Lossless compression
+    err = webp.Encode(outputFile, img, &webp.Options{Lossless: false, Quality: quality})
+    if err != nil {
+        fmt.Println("Error encoding image to WebP:", err)
+        return ""
+    }
+
+    return outputFileName
 }
