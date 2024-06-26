@@ -284,17 +284,19 @@ func (h *Handler) getCover(w http.ResponseWriter, r *http.Request) {
 	}
 	dir := filepath.Dir(book.Path)
 
+	log.Debug("Book dir", zap.String("dir", dir))
+
 	var covers []string
 	if book.HasCover {
 		covers, err = filepath.Glob(fmt.Sprintf("%s/cover.webp", dir))
 		if err != nil {
 			log.Error("Failed to get cover", zap.Int("book_id", bookID), zap.String("cover_dir", dir), zap.Error(err))
-			response.ServerError(w, r, err)
+			http.ServeFile(w, r, fmt.Sprintf("%s/default_cover.webp", "static/img"))
 			return
 		}
 		http.ServeFile(w, r, covers[0])
 	} else {
 		// Use default cover
-		// cover = fmt.Sprintf("%s/cover.jpg", dir)
+		http.ServeFile(w, r, fmt.Sprintf("%s/default_cover.webp", dir))
 	}
 }

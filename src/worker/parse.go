@@ -41,8 +41,11 @@ func parseEpub(path string) (*model.BookMeta, error) {
 	if bookCover != "" && err == nil {
 		hasCover = true
 	}
+
 	// Cover to webp
-	util.ImageToWebp(bookCover, 75)
+	// Is reckless to use goroutine here?
+	go util.ImageToWebp(bookCover, 75)
+
 	// Remove the original cover
 	go os.Remove(bookCover)
 	bookUUID := book.GetUUID()
