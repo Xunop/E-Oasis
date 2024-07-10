@@ -2,7 +2,7 @@ package config
 
 const (
 	defalutLogFile                = "logs.log"
-	defaultLogLevel               = "debug"
+	defaultLogLevel               = "info"
 	defaultLogFileMaxSize         = 20
 	defaultLogFileMaxBackups      = 3
 	defaultLogFileMaxAge          = 28

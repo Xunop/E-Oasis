@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Xunop/e-oasis/log"
@@ -42,12 +43,14 @@ func parseEpub(path string) (*model.BookMeta, error) {
 		hasCover = true
 	}
 
-	// Cover to webp
-	// Is reckless to use goroutine here?
-	go util.ImageToWebp(bookCover, 75)
+	// Transform the book cover to webp format
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		handleBookCover(bookCover)
+	}()
 
-	// Remove the original cover
-	go os.Remove(bookCover)
 	bookUUID := book.GetUUID()
 	bookISBN := book.GetISBN()
 	bookDate := book.GetDate()
@@ -83,5 +86,18 @@ func parseEpub(path string) (*model.BookMeta, error) {
 		Language:  &model.Language{},
 		Author:    &model.Author{Name: bookAuthor, Sort: sortAuthor},
 	}
+
+	// Wait for the book cover to be transformed
+	wg.Wait()
+
 	return bookMeta, err
+}
+
+// Transform the book cover to webp format
+func handleBookCover(bookCover string) {
+	util.ImageToWebp(bookCover, 75)
+
+	// Remove the original cover
+	os.Remove(bookCover)
+	return
 }

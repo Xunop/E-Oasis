@@ -14,6 +14,7 @@
 
 - 书籍阅读进度同步
 - 书签同步
+- 阅读时长
 
 3. 摘抄/笔记同步
 
@@ -43,118 +44,7 @@
 
 ### 书籍信息
 
-书籍信息存储在 SQLite 中。
-
-目前的想法：
-
-```sql
-CREATE TABLE books (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL DEFAULT 'Unknown' COLLATE NOCASE,
-    sort TEXT COLLATE NOCASE,
-    author_sort TEXT COLLATE NOCASE,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    pubdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    series_index TEXT NOT NULL DEFAULT '1.0',
-    path TEXT NOT NULL DEFAULT '',
-    has_cover SMALLINT DEFAULT 0,
-    flags INTEGER NOT NULL DEFAULT 1,
-    uuid TEXT,
-    md5 TEXT,
-    isbn TEXT DEFAULT '' COLLATE NOCASE,
-    iccn TEXT DEFAULT '' COLLATE NOCASE,
-    last_modified TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE authors (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL
-    sort TEXT,
-    link TEXT DEFAULT ''
-);
-
-CREATE TABLE books_authors_link (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER,
-    author_id INTEGER,
-    FOREIGN KEY (book_id) REFERENCES books (id),
-    FOREIGN KEY (author_id) REFERENCES authors (id),
-    UNIQUE(book_id, author_id)
-);
-
-CREATE TABLE tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL COLLATE NOCASE,
-    UNIQUE (name)
-);
-
-CREATE TABLE books_tags_link (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER,
-    tag_id INTEGER,
-    FOREIGN KEY (book_id) REFERENCES books (id),
-    FOREIGN KEY (tag_id) REFERENCES tags (id),
-    UNIQUE(book_id, tag_id)
-);
-
-CREATE TABLE comments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    comment TEXT,
-    book_id INTEGER,
-    FOREIGN KEY (book_id) REFERENCES books (id),
-    UNIQUE(book_id)
-);
-
-CREATE TABLE data (
-    id INTEGER PRIMARY KEY,
-    book_id INTEGER NOT NULL,
-    format TEXT NOT NULL COLLATE NOCASE,
-    uncompressed_size INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    FOREIGN KEY (book_id) REFERENCES books (id)
-    UNIQUE(book_id, format)
-);
-
-CREATE TABLE series (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL COLLATE NOCASE,
-    sort TEXT COLLATE NOCASE
-    UNIQUE(name)
-);
-
-CREATE TABLE books_series_link (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER,
-    series_id INTEGER,
-    FOREIGN KEY (book_id) REFERENCES books (id),
-    FOREIGN KEY (series_id) REFERENCES series (id)
-    UNIQUE(book_id)
-);
-
-CREATE TABLE publishers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL COLLATE NOCASE,
-    sort TEXT COLLATE NOCASE,
-    UNIQUE(name)
-);
-
-CREATE TABLE books_publishers_link (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER,
-    publisher_id INTEGER,
-    FOREIGN KEY (book_id) REFERENCES books (id),
-    FOREIGN KEY (publisher_id) REFERENCES publishers (id)
-);
-
-CREATE TABLE identifiers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL DEFAULT "isbn" COLLATE NOCASE,
-    value TEXT,
-    book_id INTEGER,
-    FOREIGN KEY (book_id) REFERENCES books (id)
-    UNIQUE(book_id, type)
-);
-```
+书籍信息存储在 SQLite 中。可看 `src/store/db/migration/LATEST_SYSTEM_SCHEMA.sql`
 
 以上表都是关于书籍信息，其中需要解释的点就是 sort 字段和 author_sort 字段，这些都是针对非中文书籍。
 
@@ -283,10 +173,7 @@ E-Oasis 提供上传书籍和下载书籍的接口，这两个接口仅用于同
 E-Oasis 通过这个接口将用户上传的书籍传到用户设备上。
 同样的，也可以将用户设备上的书籍同步到 E-Oasis 中。
 
-有个问题就是 E-Oasis 该提供存储功能吗？
-
-如果不提供，而是通过云盘进行存储的话，E-Oasis 只需要存放书籍的信息，而不是书籍本身。
-书籍本身可以向云盘获取。
+对上传的书籍进行 hash 处理，如果 hash 相同则不进行上传，这里的 hash 是对书籍中的所有内容进行 hash 处理。
 
 ### 书籍下载
 
@@ -309,6 +196,7 @@ CREATE TABLE reading_status (
     reading_duration INTEGER NOT NULL DEFAULT 0,
     cur_page INTEGER NOT NULL DEFAULT -1,
     status SMALLINT,
+    UNOQUE(user_id, book_id),
     FOREIGN KEY(user_id) REFERENCES user (id)
 )
 ```
