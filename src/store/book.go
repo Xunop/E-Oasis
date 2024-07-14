@@ -439,43 +439,6 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 	return &newLanguage, nil
 }
 
-func (s *Store) AddAuthor(author *model.Author) (*model.Author, error) {
-	if aID, ok := s.CheckAuthor(author.Name); ok {
-		author.ID = aID
-		return author, nil
-	}
-	stmt := `
-	    INSERT INTO authors (
-	    name, sort, link
-	    ) VALUES (?,?,?) RETURNING id,name,sort,link`
-	args := []any{}
-
-	args = append(args, author.Name)
-	args = append(args, author.Sort)
-	args = append(args, author.Link)
-
-	s.metaDbLock.Lock()
-	defer s.metaDbLock.Unlock()
-
-	tx, err := s.metaDb.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debug("SQL query and args:")
-	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
-
-	var newAuthor model.Author
-	if err := tx.QueryRow(stmt, args...).Scan(&newAuthor.ID, &newAuthor.Name, &newAuthor.Sort, &newAuthor.Link); err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return &newAuthor, nil
-}
 
 func (s *Store) AddBookUserLink(create *model.BookUserLink) (*model.BookUserLink, error) {
 	stmt := `

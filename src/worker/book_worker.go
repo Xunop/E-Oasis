@@ -255,6 +255,13 @@ func SaveBookMeta(s *store.Store) {
 		}
 		log.Debug("Add author response", zap.Any("response", authorRes))
 
+		authorLink := model.BookAuthorLink{BookID: returnBook.ID, AuthorID: authorRes.ID}
+		linkRes, err := s.AddBookAuthorLink(&authorLink)
+		if err != nil {
+			log.Error("Error add book author link", zap.Error(err))
+		}
+		log.Debug("Add book author link response", zap.Any("response", linkRes))
+
 		uidIdx := 0
 		for idx, part := range strings.Split(newBook.Path, "/") {
 			if part == "books" {

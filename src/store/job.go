@@ -34,3 +34,7 @@ func (s *Store) AddJob(job model.Job) (*model.Job, error) {
 
 	return &j, nil
 }
+
+func (s *Store) UpdateJob(job model.Job) (*model.Job, error) {
+	return nil, nil
+}
