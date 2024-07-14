@@ -58,7 +58,19 @@ func checkDataDir(dataDir string) (string, error) {
 						return "", errors.Wrap(err, "unable to get current user")
 					}
 					homeDir := currentUser.HomeDir
-					fmt.Println("Permission denied, trying to create data folder in user's home directory")
+					fmt.Println("Permission denied, trying to check data folder in user's home directory")
+					fmt.Printf("Home directory: %s\n", homeDir)
+
+					if homeDir == "" {
+						return "", errors.New("unable to get home directory")
+					}
+
+					// Check if data folder exists in user's home directory
+					if _, err := os.Stat(filepath.Join(homeDir, "/.e-oasis")); err == nil {
+						fmt.Println("Data folder exists in user's home directory: ", homeDir+"/.e-oasis")
+						return filepath.Join(homeDir, "/.e-oasis"), nil
+					}
+
 					err = os.MkdirAll(filepath.Join(homeDir, "/.e-oasis"), 0755)
 					if err != nil {
 						return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)

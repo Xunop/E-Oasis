@@ -184,7 +184,7 @@ func initConfig() {
  		log_level: %s
  		data: %s
 ---
-	`, config.Host, config.Port, config.DSN, config.LogLevel, config.Data)
+`, config.Host, config.Port, config.DSN, config.LogLevel, config.Data)
 }
 
 func main() {
