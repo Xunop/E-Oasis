@@ -178,3 +178,9 @@ func ImageToWebp(src string, quality float32) string {
 
     return outputFileName
 }
+
+// CheckFileType checks if the file type is in the list of types
+func CheckFileType(file string, types ...string) bool {
+	// Check type by fileSignatures
+	return false
+}
