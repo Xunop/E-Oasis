@@ -70,6 +70,7 @@ func (h *Handler) signIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) doSignIn(ctx context.Context, user *model.User, expireTime time.Time) error {
+	// FIXME: Why need to get secret from database every time? It should be stored in memory.
 	sSetting, err := h.store.GetOrUpsetSystemSecuritySetting()
 	if err != nil {
 		log.Error("Failed to get security setting", zap.Error(err))
@@ -77,7 +78,7 @@ func (h *Handler) doSignIn(ctx context.Context, user *model.User, expireTime tim
 	}
 	if sSetting != nil && sSetting.JWTSecret == "" {
 		log.Error("JWT secret is not set")
-		return err
+		return errors.New("JWT secret is not set")
 	}
 
 	accessToken, err := auth.GenerateAccessToken(user.Username, user.ID, expireTime, []byte(sSetting.JWTSecret))

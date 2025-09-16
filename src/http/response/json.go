@@ -49,7 +49,6 @@ func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 	log.Error(http.StatusText(http.StatusInternalServerError),
 		zap.Error(err),
 		zap.String("client_ip", request.FindClientIP(r)),
-		zap.String("client_ip", request.FindClientIP(r)),
 		zap.String("request.method", r.Method),
 		zap.String("request.uri", r.RequestURI),
 		zap.String("request.user_agent", r.UserAgent()),

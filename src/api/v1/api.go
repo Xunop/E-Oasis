@@ -17,6 +17,8 @@ type Handler struct {
 	uploadPool worker.WorkPool
 	parsePool  worker.WorkPool
 	router     *mux.Router
+	// For JWT
+	secret     string
 }
 
 func Server(router *mux.Router, store *store.Store, pools... worker.WorkPool) {
