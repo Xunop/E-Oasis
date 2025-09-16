@@ -16,34 +16,41 @@ type Handler struct {
 	store      *store.Store
 	uploadPool worker.WorkPool
 	parsePool  worker.WorkPool
-	router     *mux.Router
+	// router     *mux.Router
 	// For JWT
 	secret     string
 }
 
-func Server(router *mux.Router, store *store.Store, pools... worker.WorkPool) {
-	handler := &Handler{
+// NewHandler is a constructor for the v1.Handler
+func NewHandler(store *store.Store, pools ...worker.WorkPool) *Handler {
+	return &Handler{
 		store:      store,
 		uploadPool: pools[0],
 		parsePool:  pools[1],
-		router:     router,
 	}
+}
 
+func Server(router *mux.Router, handler *Handler) {
 	sr := router.PathPrefix("/api/v1").Subrouter()
 	middleware := middleware.NewMiddleware(handler.store)
 	sr.Use(middleware.HandleCORS)
 	sr.Use(middleware.LoggingRequest)
 
 	// sSetting, err := store.GetSystemSecuritySetting()
-	sSetting, err := store.GetOrUpsetSystemSecuritySetting()
+	sSetting, err := handler.store.GetOrUpsetSystemSecuritySetting()
 	if err != nil {
 		log.Logger.Error("Error getting security setting", zap.Error(err))
 		os.Exit(1)
 	}
 	jwtSecret := sSetting.JWTSecret
 	// Add authentication middleware
-	sr.Use(NewAuthInterceptor(store, jwtSecret).AuthenticationInterceptor)
+	sr.Use(NewAuthInterceptor(handler.store, jwtSecret).AuthenticationInterceptor)
 	sr.Methods(http.MethodOptions)
+
+
+	opdsRouter := router.PathPrefix("/opds").Subrouter()
+	opdsRouter.HandleFunc("", handler.opdsFeed).Methods(http.MethodGet)
+	opdsRouter.HandleFunc("/download/{id:[0-9]+}", handler.downloadBook).Methods(http.MethodGet)
 
 	sr.HandleFunc("/user", handler.createUser).Methods(http.MethodPost)
 	sr.HandleFunc("/users", handler.listUsers).Methods(http.MethodGet)

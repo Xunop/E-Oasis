@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"mime"
 	"os"
 	"os/signal"
 	"syscall"
@@ -188,6 +189,7 @@ func initConfig() {
 }
 
 func main() {
+	mime.AddExtensionType(".epub", "application/epub+zip")
 	if err := Execute(); err != nil {
 		panic(err)
 	}

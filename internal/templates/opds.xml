@@ -1,0 +1,36 @@
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog">
+    <id>{{.BaseURL}}/opds</id>
+    <title>E-Oasis Library</title>
+    <updated>{{.CurrentTime}}</updated>
+    <author>
+        <name>E-Oasis</name>
+    </author>
+    <link rel="self" href="{{.BaseURL}}/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+    <link rel="start" href="{{.BaseURL}}/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+
+    {{range .Books}}
+    <entry>
+        <title>{{.Title}}</title>
+        <author>
+            <name>{{.AuthorSort}}</name>
+        </author>
+        <id>urn:uuid:{{.ID}}</id>
+        <updated>{{formatDate .LastModified}}</updated>
+        
+        <link rel="http://opds-spec.org/acquisition"
+              href="{{$.BaseURL}}/opds/download/{{.ID}}"
+              type="{{.MimeType}}">
+            <opds:price currencycode="USD">0.00</opds:price>
+        </link>
+        
+        {{if .HasCover}}
+        <link rel="http://opds-spec.org/image" 
+              href="{{$.BaseURL}}/api/v1/covers/{{.ID}}" 
+              type="image/webp"/>
+        <link rel="http://opds-spec.org/image/thumbnail" 
+              href="{{$.BaseURL}}/api/v1/covers/{{.ID}}" 
+              type="image/webp"/>
+        {{end}}
+    </entry>
+    {{end}}
+</feed>

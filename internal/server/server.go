@@ -42,9 +42,10 @@ func startHTTPServer(server *http.Server) {
 func setupHandler(store *store.Store, pools... worker.WorkPool) http.Handler {
 	router := mux.NewRouter()
 
+	apiHandler := v1.NewHandler(store, pools...)
 	// TODO: Add other routes
 	// Setup the API routes
-	v1.Server(router, store, pools[0], pools[1])
+	v1.Server(router, apiHandler)
 
 	router.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		if err := store.Ping(); err != nil {
