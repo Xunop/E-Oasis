@@ -1,12 +1,5 @@
 # E-Oasis
 
-oasis (/ō-ā′sĭs/): 
-
-- A situation or place preserved from surrounding unpleasantness; a refuge.
-- A fertile or green area in a desert or wasteland, made so by the presence of water.
-
-Source: https://www.wordnik.com/words/oasis
-
 E-Oasis is a web application that allows users to manage their e-books.
 Users can search for books, add them to their library, and mark them as read/archived.
 
