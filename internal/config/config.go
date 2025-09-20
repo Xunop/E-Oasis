@@ -66,17 +66,17 @@ func checkDataDir(dataDir string) (string, error) {
 					}
 
 					// Check if data folder exists in user's home directory
-					if _, err := os.Stat(filepath.Join(homeDir, "/.e-oasis")); err == nil {
-						fmt.Println("Data folder exists in user's home directory: ", homeDir+"/.e-oasis")
-						return filepath.Join(homeDir, "/.e-oasis"), nil
+					if _, err := os.Stat(filepath.Join(homeDir, "/e-oasis")); err == nil {
+						fmt.Println("Data folder exists in user's home directory: ", homeDir+"/e-oasis")
+						return filepath.Join(homeDir, "/e-oasis"), nil
 					}
 
-					err = os.MkdirAll(filepath.Join(homeDir, "/.e-oasis"), 0755)
+					err = os.MkdirAll(filepath.Join(homeDir, "/e-oasis"), 0755)
 					if err != nil {
 						return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)
 					}
-					fmt.Println("Data folder created in user's home directory: ", homeDir+"/.e-oasis")
-					return filepath.Join(homeDir, "/.e-oasis"), nil
+					fmt.Println("Data folder created in user's home directory: ", homeDir+"/e-oasis")
+					return filepath.Join(homeDir, "/e-oasis"), nil
 				}
 				return "", errors.Wrapf(err, "unable to create default data folder %s", dataDir)
 			}

@@ -48,8 +48,15 @@ func Server(router *mux.Router, handler *Handler) {
 	sr.Methods(http.MethodOptions)
 
 
+	// opdsRouter := router.PathPrefix("/opds").Subrouter()
+	// opdsRouter.HandleFunc("", handler.opdsFeed).Methods(http.MethodGet)
+	// opdsRouter.HandleFunc("/download/{id:[0-9]+}", handler.downloadBook).Methods(http.MethodGet)
+
 	opdsRouter := router.PathPrefix("/opds").Subrouter()
-	opdsRouter.HandleFunc("", handler.opdsFeed).Methods(http.MethodGet)
+	opdsRouter.HandleFunc("", handler.opdsRootFeed).Methods(http.MethodGet)
+	opdsRouter.HandleFunc("/all", handler.opdsAllBooksFeed).Methods(http.MethodGet)
+	opdsRouter.HandleFunc("/tags", handler.opdsTagsFeed).Methods(http.MethodGet)
+	opdsRouter.HandleFunc("/tags/{id:[0-9]+}", handler.opdsBooksByTagFeed).Methods(http.MethodGet)
 	opdsRouter.HandleFunc("/download/{id:[0-9]+}", handler.downloadBook).Methods(http.MethodGet)
 
 	sr.HandleFunc("/user", handler.createUser).Methods(http.MethodPost)
@@ -60,7 +67,8 @@ func Server(router *mux.Router, handler *Handler) {
 	sr.HandleFunc("/books", handler.listBooks).Methods(http.MethodGet)
 	sr.HandleFunc("/books", handler.addBookBatch).Methods(http.MethodPost)
 	sr.HandleFunc("/book", handler.addBookSingle).Methods(http.MethodPost)
-	sr.HandleFunc("/book/{id}", handler.deleteBook).Methods(http.MethodDelete)
+	sr.HandleFunc("/book/{id:[0-9]+}", handler.deleteBook).Methods(http.MethodDelete)
+	sr.HandleFunc("/book/{id:[0-9]+}/tags", handler.addTagToBook).Methods(http.MethodPost)
 	// sr.HandleFunc("/book/{id}", handler.updateBook).Methods(http.MethodPut)
 	// sr.HandleFunc("/book/{id}", handler.getBook).Methods(http.MethodGet)
 	// Modify book status is only for user self

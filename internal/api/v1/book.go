@@ -301,3 +301,38 @@ func (h *Handler) getCover(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, fmt.Sprintf("%s/default_cover.webp", "static/img"))
 	}
 }
+
+type addTagRequest struct {
+	TagName string `json:"tagName"`
+}
+
+func (h *Handler) addTagToBook(w http.ResponseWriter, r *http.Request) {
+	// Get the book ID from the URL.
+	bookID := request.RouteIntParam(r, "id")
+	if bookID == 0 {
+		response.BadRequest(w, r, errors.New("invalid book ID"))
+		return
+	}
+
+	// Decode the incoming JSON request body.
+	var req addTagRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.BadRequest(w, r, errors.New("invalid request body"))
+		return
+	}
+
+	// Validate the input.
+	tagName := strings.TrimSpace(req.TagName)
+	if tagName == "" {
+		response.BadRequest(w, r, errors.New("tagName cannot be empty"))
+		return
+	}
+
+	if err := h.store.AddTagToBook(bookID, tagName); err != nil {
+		log.Logger.Error("failed to add tag to book", zap.Error(err))
+		response.ServerError(w, r, err)
+		return
+	}
+
+	response.OK(w, r, map[string]string{"message": "tag added successfully"})
+}

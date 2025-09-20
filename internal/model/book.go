@@ -3,6 +3,12 @@ package model //import "github.com/Xunop/e-oasis/model"
 type Meta struct {
 }
 
+type Tag struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	BookCount int    `json:"book_count"` // To hold the count of books
+}
+
 type Book struct {
 	ID           int    `json:"id"`
 	Title        string `json:"title"`

@@ -1,11 +1,13 @@
 package store
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -91,23 +93,23 @@ func (s *Store) ListBooks(find *model.FindBook) ([]*model.Book, error) {
 	}
 
 	query := `
-        SELECT
-            id,
-            title,
-            sort,
-            timestamp,
-            pubdate,
-            series_index,
-            author_sort,
-            isbn,
-            lccn,
-            path,
-            flags,
-            uuid,
-            has_cover,
-            last_modified
-        FROM books
-    WHERE ` + strings.Join(where, " AND ") + ` ORDER BY ` + strings.Join(orderBy, ", ")
+	       SELECT
+	           id,
+	           title,
+	           sort,
+	           timestamp,
+	           pubdate,
+	           series_index,
+	           author_sort,
+	           isbn,
+	           lccn,
+	           path,
+	           flags,
+	           uuid,
+	           has_cover,
+	           last_modified
+	       FROM books
+	   WHERE ` + strings.Join(where, " AND ") + ` ORDER BY ` + strings.Join(orderBy, ", ")
 	if v := find.Limit; v != nil {
 		query += fmt.Sprintf(" LIMIT %d", *v)
 	}
@@ -146,6 +148,7 @@ func (s *Store) ListBooks(find *model.FindBook) ([]*model.Book, error) {
 		}
 		list = append(list, &book)
 	}
+
 	return list, nil
 }
 
@@ -439,7 +442,6 @@ func (s *Store) AddLanguage(code string) (*model.Language, error) {
 	return &newLanguage, nil
 }
 
-
 func (s *Store) AddBookUserLink(create *model.BookUserLink) (*model.BookUserLink, error) {
 	stmt := `
 		INSERT INTO book_user_link (
@@ -627,4 +629,123 @@ func (s *Store) CheckBookStatus(bookID, userID int) bool {
 	}
 
 	return exists
+}
+
+// ListAllTags retrieves all unique tags and their book counts.
+func (s *Store) ListAllTags() ([]*model.Tag, error) {
+	query := `
+		SELECT
+			t.id,
+			t.name,
+			COUNT(btl.book) as count
+		FROM tags t
+		JOIN books_tags_link btl ON t.id = btl.tag
+		GROUP BY t.id, t.name
+		ORDER BY t.name
+	`
+	rows, err := s.metaDb.Query(query)
+	if err != nil {
+		log.Error("Failed to query all tags", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []*model.Tag
+	for rows.Next() {
+		var tag model.Tag
+		if err := rows.Scan(&tag.ID, &tag.Name, &tag.BookCount); err != nil {
+			return nil, err
+		}
+		tags = append(tags, &tag)
+	}
+	return tags, nil
+}
+
+// ListBooksByTag retrieves all books associated with a specific tag ID.
+func (s *Store) ListBooksByTag(tagID int) ([]*model.Book, error) {
+	query := `
+		SELECT
+			b.id, b.title, b.sort, b.timestamp, b.pubdate, b.series_index,
+			b.author_sort, b.isbn, b.lccn, b.path, b.flags, b.uuid,
+			b.has_cover, b.last_modified
+		FROM books b
+		JOIN books_tags_link btl ON b.id = btl.book
+		WHERE btl.tag = ?
+		ORDER BY b.sort
+	`
+	rows, err := s.metaDb.Query(query, tagID)
+	if err != nil {
+		log.Error("Failed to query books by tag", zap.Int("tagID", tagID), zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var books []*model.Book
+	for rows.Next() {
+		var book model.Book
+		if err := rows.Scan(
+			&book.ID, &book.Title, &book.SortTitle, &book.TimeStamp, &book.PublishDate,
+			&book.SeriesIndex, &book.AuthorSort, &book.ISBN, &book.LCCN, &book.Path,
+			&book.Flags, &book.UUID, &book.HasCover, &book.LastModified,
+		); err != nil {
+			return nil, err
+		}
+		books = append(books, &book)
+	}
+	return books, nil
+}
+
+// AddTagToBook associates a tag with a book.
+// It finds the tag by name or creates it if it doesn't exist,
+// then creates the link between the book and the tag.
+// This is done in a transaction to ensure atomicity.
+func (s *Store) AddTagToBook(bookID int, tagName string) error {
+	tx, err := s.metaDb.Begin()
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	// Defer a rollback in case of an error, it will be ignored if Commit() is called.
+	defer tx.Rollback()
+
+	// Find the tag's ID, or create the tag if it doesn't exist.
+	tagID, err := s.findOrCreateTagTx(tx, tagName)
+	if err != nil {
+		return errors.Wrap(err, "failed to find or create tag")
+	}
+
+	// Create the link between the book and the tag.
+	// "INSERT OR IGNORE" is used to silently fail if the link already exists,
+	// preventing duplicate entry errors, which is desired behavior.
+	stmt := `INSERT OR IGNORE INTO books_tags_link (book, tag) VALUES (?, ?)`
+	if _, err := tx.Exec(stmt, bookID, tagID); err != nil {
+		return errors.Wrap(err, "failed to insert into books_tags_link")
+	}
+
+	return tx.Commit()
+}
+
+// findOrCreateTagTx finds a tag by name or creates it if it doesn't exist.
+// This helper must be called within an existing transaction.
+func (s *Store) findOrCreateTagTx(tx *sql.Tx, tagName string) (int, error) {
+	var tagID int
+
+	// try to find the existing tag.
+	query := `SELECT id FROM tags WHERE name = ?`
+	err := tx.QueryRow(query, tagName).Scan(&tagID)
+
+	if err != nil {
+		// If no rows were found, the tag doesn't exist. Create it.
+		if errors.Is(err, sql.ErrNoRows) {
+			insertStmt := `INSERT INTO tags (name) VALUES (?) RETURNING id`
+			if err := tx.QueryRow(insertStmt, tagName).Scan(&tagID); err != nil {
+				return 0, errors.Wrap(err, "failed to insert new tag")
+			}
+			return tagID, nil
+		}
+		// For any other error, return it.
+		return 0, errors.Wrap(err, "failed to query for existing tag")
+	}
+
+	// If we found the tag, return its ID.
+	return tagID, nil
 }
