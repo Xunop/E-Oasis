@@ -209,6 +209,28 @@ func (w *BookParseWorker) Run() {
 			continue
 		}
 
+		// When We parse the book, we need to save the book metadata
+		// Save the book metadata
+		newBook := &model.Book{
+			Title:        bookMeta.Book.Title,
+			SortTitle:    bookMeta.Book.SortTitle,
+			PublishDate:  bookMeta.Book.PublishDate,
+			AuthorSort:   bookMeta.Book.AuthorSort,
+			ISBN:         bookMeta.Book.ISBN,
+			Path:         bookMeta.Book.Path,
+			UUID:         bookMeta.Book.UUID,
+			HasCover:     bookMeta.Book.HasCover,
+			LastModified: bookMeta.Book.LastModified,
+		}
+
+		returnBook, err := w.store.AddBook(newBook)
+		if err != nil {
+			log.Error("Error adding book", zap.Error(err))
+			ErrorChan <- err
+			continue
+		}
+		w.store.BookCache.Store(returnBook.ID, returnBook)
+		bookMeta.Book = returnBook
 		if job.Type == "SINGLE" {
 			MetaSingle <- *bookMeta
 		}
@@ -223,25 +245,27 @@ func SaveBookMeta(s *store.Store) {
 
 		// When We parse the book, we need to save the book metadata
 		// Save the book metadata
-		newBook := &model.Book{
-			Title:        metaData.Book.Title,
-			SortTitle:    metaData.Book.SortTitle,
-			PublishDate:  metaData.Book.PublishDate,
-			AuthorSort:   metaData.Book.AuthorSort,
-			ISBN:         metaData.Book.ISBN,
-			Path:         metaData.Book.Path,
-			UUID:         metaData.Book.UUID,
-			HasCover:     metaData.Book.HasCover,
-			LastModified: metaData.Book.LastModified,
-		}
+		// newBook := &model.Book{
+		// 	Title:        metaData.Book.Title,
+		// 	SortTitle:    metaData.Book.SortTitle,
+		// 	PublishDate:  metaData.Book.PublishDate,
+		// 	AuthorSort:   metaData.Book.AuthorSort,
+		// 	ISBN:         metaData.Book.ISBN,
+		// 	Path:         metaData.Book.Path,
+		// 	UUID:         metaData.Book.UUID,
+		// 	HasCover:     metaData.Book.HasCover,
+		// 	LastModified: metaData.Book.LastModified,
+		// }
+		//
+		// returnBook, err := s.AddBook(newBook)
+		// if err != nil {
+		// 	log.Error("Error adding book", zap.Error(err))
+		// 	ErrorChan <- err
+		// 	continue
+		// }
+		// s.BookCache.Store(returnBook.ID, returnBook)
 
-		returnBook, err := s.AddBook(newBook)
-		if err != nil {
-			log.Error("Error adding book", zap.Error(err))
-			ErrorChan <- err
-			continue
-		}
-		s.BookCache.Store(returnBook.ID, returnBook)
+		returnBook := metaData.Book
 
 		publisherRes, err := s.AddPublisher(metaData.Publisher)
 		if err != nil {
@@ -263,18 +287,18 @@ func SaveBookMeta(s *store.Store) {
 		log.Debug("Add book author link response", zap.Any("response", linkRes))
 
 		uidIdx := 0
-		for idx, part := range strings.Split(newBook.Path, "/") {
+		for idx, part := range strings.Split(metaData.Book.Path, "/") {
 			if part == "books" {
 				uidIdx = idx
 			}
 		}
 		if uidIdx == 0 {
-			log.Error("Error getting user ID", zap.String("path", newBook.Path))
+			log.Error("Error getting user ID", zap.String("path", metaData.Book.Path))
 			continue
 		}
-		uid, err := strconv.Atoi(strings.Split(newBook.Path, "/")[uidIdx-1])
+		uid, err := strconv.Atoi(strings.Split(metaData.Book.Path, "/")[uidIdx-1])
 		if err != nil {
-			log.Error("Error getting user ID", zap.Error(err), zap.String("path", newBook.Path))
+			log.Error("Error getting user ID", zap.Error(err), zap.String("path", metaData.Book.Path))
 		}
 		bookUserLinkRes, err := s.AddBookUserLink(&model.BookUserLink{BookID: returnBook.ID, UserID: uid})
 		if err != nil {

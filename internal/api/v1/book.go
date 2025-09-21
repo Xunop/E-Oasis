@@ -157,6 +157,7 @@ func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 		// When We parse the book, we need to save the book metadata
 		// Save the book metadata
 		newBook := &model.Book{
+			ID:           bookMeta.Book.ID,
 			Title:        bookMeta.Book.Title,
 			SortTitle:    bookMeta.Book.SortTitle,
 			PublishDate:  bookMeta.Book.PublishDate,

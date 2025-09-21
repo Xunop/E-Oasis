@@ -1,0 +1,27 @@
+[Unit]
+Description=Ebook Monitor and API Uploader Service
+# This ensures the service starts after the network and Docker service is running.
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+# The user that will run the script. Use a non-root user if possible, but ensure they have read permissions on the MONITOR_DIR.
+User=nas
+
+# The full path to the script to be executed.
+# It is recommended to place the script in /usr/local/bin
+ExecStart=/usr/local/bin/ebook_monitor.sh
+
+# Restart the service automatically if it fails.
+Restart=always
+RestartSec=10
+
+# Standard output and error will be redirected to the systemd journal.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+# Enable the service to start at boot time in a multi-user environment.
+WantedBy=multi-user.target
+
