@@ -3,10 +3,15 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Xunop/e-oasis/log"
 	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/util"
+	"github.com/Xunop/e-oasis/util/parsers/epub"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -748,4 +753,140 @@ func (s *Store) findOrCreateTagTx(tx *sql.Tx, tagName string) (int, error) {
 
 	// If we found the tag, return its ID.
 	return tagID, nil
+}
+
+// ParseAndSaveBookMeta takes a file path, parses it, and saves the book and all
+// its related metadata (author, publisher, links) in a single transaction.
+func (s *Store) ParseAndSaveBookMeta(path string, userID int, tags []string) error {
+	// Parse the book file to get its metadata.
+	book, err := epub.Open(path)
+	if err != nil {
+		return errors.Wrap(err, "failed to open epub for parsing")
+	}
+	defer book.Close()
+
+	hasCover := false
+	bookCover, _ := book.GetCover(filepath.Dir(path))
+	if bookCover != "" {
+		hasCover = true
+		// Handle cover conversion in a separate goroutine so it doesn't slow down the import
+		go func(coverPath string) {
+			webpPath := util.ImageToWebp(coverPath, 75)
+			if webpPath != "" { // If conversion succeeds, remove original
+				os.Remove(coverPath)
+			}
+		}(bookCover)
+	}
+
+	// Begin a database transaction.
+	tx, err := s.metaDb.Begin()
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	defer tx.Rollback() // Rollback on any error
+
+	// Create or find the author within the transaction.
+	authorName := book.GetAuthor()
+	authorSort := util.AuthorSort(authorName)
+	authorID, err := s.findOrCreateAuthorTx(tx, authorName, authorSort)
+	if err != nil {
+		return err
+	}
+
+	// Create or find the publisher within the transaction.
+	publisherName := book.GetPublisher()
+	if strings.TrimSpace(publisherName) == "" {
+		publisherName = "Unknown"
+	}
+	publisherID, err := s.findOrCreatePublisherTx(tx, publisherName)
+	if err != nil {
+		return err
+	}
+
+	// Insert the book record.
+	bookToCreate := &model.Book{
+		Title:        book.GetTitle(),
+		SortTitle:    util.TitleSort(book.GetTitle()),
+		PublishDate:  book.GetDate(),
+		AuthorSort:   authorSort,
+		ISBN:         book.GetISBN(),
+		Path:         path,
+		UUID:         book.GetUUID(),
+		HasCover:     hasCover,
+		LastModified: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	bookInsertStmt := `INSERT INTO books (title, sort, pubdate, author_sort, isbn, path, uuid, has_cover, last_modified) 
+					   VALUES (?,?,?,?,?,?,?,?,?) RETURNING id`
+	var bookID int
+	err = tx.QueryRow(bookInsertStmt, bookToCreate.Title, bookToCreate.SortTitle, bookToCreate.PublishDate,
+		bookToCreate.AuthorSort, bookToCreate.ISBN, bookToCreate.Path, bookToCreate.UUID,
+		bookToCreate.HasCover, bookToCreate.LastModified).Scan(&bookID)
+	if err != nil {
+		return errors.Wrap(err, "failed to insert book record")
+	}
+
+	// Link book to author and publisher.
+	_, err = tx.Exec(`INSERT OR IGNORE INTO books_authors_link (book, author) VALUES (?, ?)`, bookID, authorID)
+	if err != nil {
+		return errors.Wrap(err, "failed to link book to author")
+	}
+
+	_, err = tx.Exec(`INSERT OR IGNORE INTO books_publishers_link (book, publisher) VALUES (?, ?)`, bookID, publisherID)
+	if err != nil {
+		return errors.Wrap(err, "failed to link book to publisher")
+	}
+
+	if len(tags) > 0 {
+		for _, tagName := range tags {
+			// Sanitize tag name
+			tagName = strings.TrimSpace(tagName)
+			if tagName == "" {
+				continue
+			}
+
+			// Find or create the tag within the transaction
+			tagID, err := s.findOrCreateTagTx(tx, tagName)
+			if err != nil {
+				// If one tag fails, the whole transaction for this book will be rolled back.
+				return errors.Wrapf(err, "failed to find or create tag '%s'", tagName)
+			}
+
+			// Link the book to the tag
+			_, err = tx.Exec(`INSERT OR IGNORE INTO books_tags_link (book, tag) VALUES (?, ?)`, bookID, tagID)
+			if err != nil {
+				return errors.Wrapf(err, "failed to link book to tag '%s'", tagName)
+			}
+		}
+	}
+
+	// Link the book to the user in the other database.
+	// This can't be in the same transaction, but should happen before we commit.
+	if _, err := s.AddBookUserLink(&model.BookUserLink{BookID: bookID, UserID: userID}); err != nil {
+		return errors.Wrap(err, "failed to link book to user")
+	}
+
+	// Commit the transaction.
+	log.Debug("Successfully imported and saved metadata", zap.String("book", book.GetTitle()))
+	return tx.Commit()
+}
+
+// Helper function for finding/creating authors within a transaction.
+func (s *Store) findOrCreateAuthorTx(tx *sql.Tx, name, sort string) (int, error) {
+	var authorID int
+	err := tx.QueryRow(`SELECT id FROM authors WHERE name = ?`, name).Scan(&authorID)
+	if err == sql.ErrNoRows {
+		err = tx.QueryRow(`INSERT INTO authors (name, sort, link) VALUES (?, ?, ?) RETURNING id`, name, sort, "").Scan(&authorID)
+	}
+	return authorID, err
+}
+
+// Helper function for finding/creating publishers within a transaction.
+func (s *Store) findOrCreatePublisherTx(tx *sql.Tx, name string) (int, error) {
+	var publisherID int
+	err := tx.QueryRow(`SELECT id FROM publishers WHERE name = ?`, name).Scan(&publisherID)
+	if err == sql.ErrNoRows {
+		err = tx.QueryRow(`INSERT INTO publishers (name, sort) VALUES (?, ?) RETURNING id`, name, "").Scan(&publisherID)
+	}
+	return publisherID, err
 }

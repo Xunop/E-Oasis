@@ -1,9 +1,13 @@
 package v1
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -171,6 +175,47 @@ func (h *Handler) addBookSingle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) importBooks(w http.ResponseWriter, r *http.Request) {
+	file, header, err := r.FormFile("archive") // Expect a form field named "archive"
+	if err != nil {
+		response.BadRequest(w, r, errors.New("missing 'archive' file in request"))
+		return
+	}
+	defer file.Close()
+
+	mapTags := r.FormValue("mapTags") == "true"
+
+	uid, _ := strconv.Atoi(request.GetUserID(r))
+
+	// Save the archive to a temporary location
+	tmpDir := filepath.Join(config.Opts.Data, fmt.Sprintf("%d/tmp", uid))
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+		response.ServerError(w, r, errors.Wrap(err, "could not create temp dir for import"))
+		return
+	}
+
+	archivePath := filepath.Join(tmpDir, header.Filename)
+	dst, err := os.Create(archivePath)
+	if err != nil {
+		response.ServerError(w, r, errors.Wrap(err, "could not save import archive"))
+		return
+	}
+
+	if _, err := io.Copy(dst, file); err != nil {
+		dst.Close()
+		response.ServerError(w, r, errors.Wrap(err, "could not write import archive"))
+		return
+	}
+	dst.Close()
+
+	// Launch the processing in a background goroutine.
+	// The API returns immediately.
+	go h.processImportArchive(archivePath, uid, mapTags)
+
+	log.Info("Book import job accepted", zap.Int("uid", uid), zap.String("archive", header.Filename))
+	response.Accepted(w, r) // Respond with 202 Accepted
+}
+
 // TODO: Add batch delete and delete link data
 func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
 	bookID := request.RouteIntParam(r, "id")
@@ -335,4 +380,91 @@ func (h *Handler) addTagToBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, map[string]string{"message": "tag added successfully"})
+}
+
+// processImportArchive runs in the background to unpack and import books.
+func (h *Handler) processImportArchive(archivePath string, userID int, mapTags bool) {
+	// Clean up the archive file when done
+	defer os.Remove(archivePath)
+
+	log.Debug("Starting archive processing", zap.String("archive", archivePath))
+
+	archiveFile, err := os.Open(archivePath)
+	if err != nil {
+		log.Error("Failed to open archive for processing", zap.Error(err))
+		return
+	}
+	defer archiveFile.Close()
+
+	gzipReader, err := gzip.NewReader(archiveFile)
+	if err != nil {
+		log.Error("Failed to create gzip reader for archive", zap.Error(err))
+		return
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			log.Error("Error reading tar header in archive", zap.String("archive", archivePath), zap.Error(err))
+			continue
+		}
+
+		// Skip directories and unsupported files
+		ext := filepath.Ext(header.Name)
+		if header.Typeflag != tar.TypeReg || !config.CheckSupportedTypes(ext[1:]) {
+			continue
+		}
+
+		var tagsToAdd []string
+		if mapTags {
+			// Get the directory part of the file's path within the archive
+			archiveDir := filepath.Dir(header.Name)
+			if archiveDir != "." {
+				// Split the path by the separator to get individual directory names
+				tagsToAdd = strings.Split(archiveDir, string(filepath.Separator))
+			}
+		}
+
+		// Determine final path for the book
+		bookDir := strings.TrimSuffix(filepath.Base(header.Name), ext)
+		finalBookDir := fmt.Sprintf("%s/%d/books/%s", config.Opts.Data, userID, bookDir)
+		finalBookDir = util.GenerateNewDirName(finalBookDir) // Ensure unique directory
+
+		if err := os.MkdirAll(finalBookDir, os.ModePerm); err != nil {
+			log.Error("Failed to create book directory during import", zap.Error(err))
+			continue
+		}
+
+		finalBookPath := filepath.Join(finalBookDir, filepath.Base(header.Name))
+
+		// Stream the file from the archive to its final destination
+		outFile, err := os.Create(finalBookPath)
+		if err != nil {
+			log.Error("Failed to create book file during import", zap.Error(err))
+			continue
+		}
+
+		if _, err := io.Copy(outFile, tarReader); err != nil {
+			log.Error("Failed to write book file during import", zap.Error(err))
+			outFile.Close()
+			continue
+		}
+		outFile.Close()
+
+		// Now that the file is saved, parse its metadata and save it to the DB.
+		log.Debug("Imported book saved, now parsing", zap.String("path", finalBookPath))
+		if err := h.store.ParseAndSaveBookMeta(finalBookPath, userID, tagsToAdd); err != nil {
+			log.Error("Failed to parse and save metadata for imported book", zap.String("path", finalBookPath), zap.Error(err))
+			// Optional: Clean up the saved book file on error
+			os.RemoveAll(finalBookDir)
+		}
+	}
+
+	log.Info("Finished processing archive", zap.String("archive", archivePath))
 }

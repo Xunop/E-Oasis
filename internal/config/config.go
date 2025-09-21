@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -109,11 +110,5 @@ func CheckSupportedTypes(fileType string) bool {
 		return false
 	}
 
-	for _, t := range Opts.SupportedTypes {
-		if t == fileType {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(Opts.SupportedTypes, fileType)
 }

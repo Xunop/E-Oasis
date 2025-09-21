@@ -64,6 +64,7 @@ func Server(router *mux.Router, handler *Handler) {
 	sr.HandleFunc("/signup", handler.signUp).Methods(http.MethodPost)
 	sr.HandleFunc("/signin", handler.signIn).Methods(http.MethodPost)
 	sr.HandleFunc("/settings/general", handler.SetGeneralSettings).Methods(http.MethodPost)
+	sr.HandleFunc("/import/books", handler.importBooks).Methods(http.MethodPost)
 	sr.HandleFunc("/books", handler.listBooks).Methods(http.MethodGet)
 	sr.HandleFunc("/books", handler.addBookBatch).Methods(http.MethodPost)
 	sr.HandleFunc("/book", handler.addBookSingle).Methods(http.MethodPost)
