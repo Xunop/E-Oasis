@@ -1,4 +1,4 @@
-package worker // import "github.com/Xunop/e-oasis/worker"
+package worker // import "github.com/Xunop/e-oasis/internal/worker"
 
 import (
 	"fmt"
@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/util"
-	"github.com/Xunop/e-oasis/util/parsers/epub"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/util"
+	"github.com/Xunop/e-oasis/internal/util/parsers/epub"
 	"go.uber.org/zap"
 )
 

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Xunop/e-oasis/http/request"
-	"github.com/Xunop/e-oasis/log"
+	"github.com/Xunop/e-oasis/internal/http/request"
+	"github.com/Xunop/e-oasis/internal/log"
 	"go.uber.org/zap"
 )
 

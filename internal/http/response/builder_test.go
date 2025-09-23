@@ -1,4 +1,4 @@
-package response // import "github.com/Xunop/e-oasis/http/response"
+package response // import "github.com/Xunop/e-oasis/internal/http/response"
 
 import (
 	"net/http"

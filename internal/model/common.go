@@ -1,4 +1,4 @@
-package model //import "github.com/Xunop/e-oasis/model"
+package model //import "github.com/Xunop/e-oasis/internal/model"
 
 // RowStatus is the status for a row.
 type RowStatus string

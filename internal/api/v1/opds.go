@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Xunop/e-oasis/http/request"
-	"github.com/Xunop/e-oasis/http/response"
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/internal/http/request"
+	"github.com/Xunop/e-oasis/internal/http/response"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )

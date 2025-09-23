@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/internal/config"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
 )
 
 var testBookDb *sql.DB

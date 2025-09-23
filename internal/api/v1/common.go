@@ -3,9 +3,9 @@ package v1
 import (
 	"net/http"
 
-	"github.com/Xunop/e-oasis/http/request"
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/store"
+	"github.com/Xunop/e-oasis/internal/http/request"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/store"
 )
 
 func getCurrentUser(r *http.Request, s *store.Store) (*model.User, error) {

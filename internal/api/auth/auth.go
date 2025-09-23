@@ -1,4 +1,4 @@
-package auth // import "github.com/Xunop/e-oasis/auth"
+package auth // import "github.com/Xunop/e-oasis/internal/auth"
 
 import (
 	"fmt"

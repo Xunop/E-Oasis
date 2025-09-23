@@ -1,4 +1,4 @@
-package response// import "github.com/Xunop/e-oasis/builder"
+package response// import "github.com/Xunop/e-oasis/internal/builder"
 
 import (
 	"compress/flate"

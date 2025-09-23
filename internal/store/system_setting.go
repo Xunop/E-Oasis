@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/util"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/util"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )

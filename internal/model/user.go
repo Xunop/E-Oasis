@@ -1,4 +1,4 @@
-package model //import "github.com/Xunop/e-oasis/model"
+package model //import "github.com/Xunop/e-oasis/internal/model"
 
 // Role is the type of a role.
 type Role string

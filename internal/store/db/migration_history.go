@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/Xunop/e-oasis/store"
+	"github.com/Xunop/e-oasis/internal/store"
 	"github.com/pkg/errors"
 )
 

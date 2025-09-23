@@ -3,8 +3,8 @@ package store
 import (
 	"fmt"
 
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
 )
 
 func (s *Store) AddAuthor(author *model.Author) (*model.Author, error) {

@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/Xunop/e-oasis/model"
+	"github.com/Xunop/e-oasis/internal/model"
 )
 
 func (s *Store) ListJobs() (*[]model.Job, error) {

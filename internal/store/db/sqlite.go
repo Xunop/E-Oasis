@@ -15,10 +15,10 @@ import (
 	"github.com/pkg/errors"
 	"modernc.org/sqlite"
 
-	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/util"
-	"github.com/Xunop/e-oasis/version"
+	"github.com/Xunop/e-oasis/internal/config"
+	"github.com/Xunop/e-oasis/internal/store"
+	"github.com/Xunop/e-oasis/internal/util"
+	"github.com/Xunop/e-oasis/internal/version"
 )
 
 type DB struct {

@@ -1,4 +1,4 @@
-package store // import "github.com/Xunop/e-oasis/store"
+package store // import "github.com/Xunop/e-oasis/internal/store"
 
 import (
 	"database/sql"

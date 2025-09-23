@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/middleware"
-	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/worker"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/middleware"
+	"github.com/Xunop/e-oasis/internal/store"
+	"github.com/Xunop/e-oasis/internal/worker"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )

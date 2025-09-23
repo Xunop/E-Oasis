@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/log"
+	"github.com/Xunop/e-oasis/internal/config"
+	"github.com/Xunop/e-oasis/internal/log"
 	"github.com/pkg/errors"
 	_ "modernc.org/sqlite"
 )

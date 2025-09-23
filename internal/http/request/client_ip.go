@@ -1,4 +1,4 @@
-package request //import "github.com/Xunop/e-oasis/http/request"
+package request //import "github.com/Xunop/e-oasis/internal/http/request"
 
 import (
 	"net"

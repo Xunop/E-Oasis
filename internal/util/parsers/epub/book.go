@@ -1,4 +1,4 @@
-package epub // import "github.com/Xunop/e-oasis/util/parsers/epub"
+package epub // import "github.com/Xunop/e-oasis/internal/util/parsers/epub"
 
 import (
 	"archive/zip"

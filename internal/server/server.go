@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Xunop/e-oasis/api/v1"
-	"github.com/Xunop/e-oasis/config"
+	"github.com/Xunop/e-oasis/internal/api/v1"
+	"github.com/Xunop/e-oasis/internal/config"
 
-	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/version"
-	"github.com/Xunop/e-oasis/worker"
+	"github.com/Xunop/e-oasis/internal/store"
+	"github.com/Xunop/e-oasis/internal/version"
+	"github.com/Xunop/e-oasis/internal/worker"
 	"github.com/gorilla/mux"
 )
 

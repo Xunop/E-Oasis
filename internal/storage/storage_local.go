@@ -1,4 +1,4 @@
-package storage // import "github.com/Xunop/e-oasis/storage"
+package storage // import "github.com/Xunop/e-oasis/internal/storage"
 
 import (
 	"crypto/sha256"
@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/util"
+	"github.com/Xunop/e-oasis/internal/config"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/util"
 	"go.uber.org/zap"
 )
 

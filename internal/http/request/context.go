@@ -1,10 +1,10 @@
-package request //import "github.com/Xunop/e-oasis/http/request"
+package request //import "github.com/Xunop/e-oasis/internal/http/request"
 
 import (
 	"net/http"
 
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/log"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/log"
 	"go.uber.org/zap"
 )
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Xunop/e-oasis/config"
+	"github.com/Xunop/e-oasis/internal/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"

@@ -1,11 +1,11 @@
-package validator // import "github.com/Xunop/e-oasis/validator"
+package validator // import "github.com/Xunop/e-oasis/internal/validator"
 
 import (
 	"github.com/pkg/errors"
 
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/util"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/store"
+	"github.com/Xunop/e-oasis/internal/util"
 )
 
 func ValidateUserCreateRequest(s *store.Store, user *model.UserCreateRequest) error {

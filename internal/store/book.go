@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/util"
-	"github.com/Xunop/e-oasis/util/parsers/epub"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/util"
+	"github.com/Xunop/e-oasis/internal/util/parsers/epub"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -611,12 +611,35 @@ func (s *Store) CheckPublisher(name string) (int, bool) {
 	return publisherID, true
 }
 
+// AddBookHashLink creates a link between a book ID and its unique content hash.
+func (s *Store) AddBookHashLink(bookID int, hash string) error {
+	stmt := `INSERT INTO book_hash_link (book_id, hash) VALUES (?, ?)`
+	args := []any{bookID, hash}
+
+	s.appDbLock.Lock()
+	defer s.appDbLock.Unlock()
+	tx, err := s.appDb.Begin()
+	if err != nil {
+		return err
+	}
+
+	log.Debug("SQL query and args:")
+	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+
+	if _, err := tx.Exec(stmt, args...); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func (s *Store) CheckBookHash(hash string) (int, bool) {
 	stmt := `SELECT book_id FROM book_hash_link WHERE hash = ?`
 	args := []any{hash}
 
 	var bookID int
-	if err := s.metaDb.QueryRow(stmt, args...).Scan(&bookID); err != nil {
+	if err := s.appDb.QueryRow(stmt, args...).Scan(&bookID); err != nil {
 		return 0, false
 	}
 	return bookID, true

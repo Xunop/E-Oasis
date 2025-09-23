@@ -8,7 +8,7 @@ MONITOR_DIR="/storage/documents/ebooks"
 API_URL="http://localhost:8080/api/v1/book"
 
 # authentication cookie.
-COOKIE="e-oasis-access-token=your-token"
+COOKIE="e-oasis-access-token=eyJhbGciOiJIUzI1NiIsImtpZCI6InYxIiwidHlwIjoiSldUIn0.eyJuYW1lIjoieHVuIiwiaXNzIjoiZS1vYXNpcyIsInN1YiI6IjEiLCJhdWQiOlsidXNlci5hYY2Nlc3MtdG9rZW4iXSwiZXhwIjo0OTExOTgxNjk4LCJpYXQiOjE3NTgzODE2OTh9.ZfO3OX_UYaYswX-z6STMGJUy8k2YAMfuWg1dYdHivUE"
 
 # Check for 'jq' dependency.
 if ! command -v jq &> /dev/null

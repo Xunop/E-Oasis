@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/server"
-	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/store/db"
-	"github.com/Xunop/e-oasis/worker"
+	"github.com/Xunop/e-oasis/internal/config"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/server"
+	"github.com/Xunop/e-oasis/internal/store"
+	"github.com/Xunop/e-oasis/internal/store/db"
+	"github.com/Xunop/e-oasis/internal/worker"
 	"github.com/spf13/cobra"
 )
 

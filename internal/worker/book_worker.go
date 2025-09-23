@@ -1,6 +1,7 @@
-package worker // import "github.com/Xunop/e-oasis/worker"
+package worker // import "github.com/Xunop/e-oasis/internal/worker"
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -9,14 +10,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/Xunop/e-oasis/config"
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/store"
-	"github.com/Xunop/e-oasis/util/parsers/epub"
+	"github.com/Xunop/e-oasis/internal/config"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/store"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -201,6 +202,29 @@ func (w *BookParseWorker) Run() {
 		log.Debug("Parse book in", zap.String("dir", job.Path))
 
 		filePath := fmt.Sprintf("%s/%s", job.Path, job.Item.(*multipart.FileHeader).Filename)
+
+		bookHash, err := generateBookHash(filePath)
+		if err != nil {
+			log.Error("Failed to generate book hash", zap.String("Book", filePath), zap.Error(err))
+			ErrorChan <- errors.Wrap(err, "failed to generate book hash")
+			os.RemoveAll(job.Path)
+			continue
+		}
+
+		if bookID, exists := w.store.CheckBookHash(bookHash); exists {
+			log.Warn("Duplicate book detected, aborting import.",
+				zap.String("hash", bookHash),
+				zap.Int("existing_book_id", bookID),
+				zap.String("path", filePath))
+
+			os.RemoveAll(job.Path)
+
+			if job.Type == "SINGLE" {
+				ErrorChan <- errors.New("book already exists")
+			}
+			continue
+		}
+
 		bookMeta, err := ParseBook(filePath)
 		if err != nil {
 			log.Error("Parse book error", zap.String("Book", filePath), zap.Error(err))
@@ -229,6 +253,14 @@ func (w *BookParseWorker) Run() {
 			ErrorChan <- err
 			continue
 		}
+
+		if err := w.store.AddBookHashLink(returnBook.ID, bookHash); err != nil {
+			log.Error("Failed to link book hash",
+				zap.Int("book_id", returnBook.ID),
+				zap.String("hash", bookHash),
+				zap.Error(err))
+		}
+
 		w.store.BookCache.Store(returnBook.ID, returnBook)
 		bookMeta.Book = returnBook
 		if job.Type == "SINGLE" {
@@ -311,46 +343,46 @@ func SaveBookMeta(s *store.Store) {
 }
 
 // generateBookHash generate the hash of the book
-func generateBookHash(book string) (string, error) {
-	bookType := filepath.Ext(book)
+func generateBookHash(bookPath string) (string, error) {
+	bookType := filepath.Ext(bookPath)
 	switch bookType {
 	case ".epub":
-		epub, err := epub.Open(book)
+		r, err := zip.OpenReader(bookPath)
 		if err != nil {
-			log.Error("Error opening epub", zap.Error(err))
+			log.Error("Error opening epub for hashing", zap.Error(err), zap.String("path", bookPath))
 			return "", err
 		}
-		defer epub.Close()
+		defer r.Close()
 
-		content := ""
-
-		// Metadata
-		content += epub.GetTitle()
-		content += epub.GetAuthor()
-		content += epub.GetDate()
-		content += epub.GetPublisher()
-		content += epub.GetDescription()
-
-		items := epub.Opf.Manifest
-		for _, item := range items {
-			if item.MediaType != "application/xhtml+xml" {
-				continue
-			}
-			data, err := epub.GetContent(item.Href)
-			if err != nil {
-				return "", err
-			}
-			content += string(data)
-		}
+		// To ensure the stability of the hash, we must always process files in the same order.
+        // Here, we sort them alphabetically by filename.
+		sort.Slice(r.File, func(i, j int) bool {
+			return r.File[i].Name < r.File[j].Name
+		})
 
 		hash := sha256.New()
-		_, err = hash.Write([]byte(content))
-		if err != nil {
-			log.Error("Error writing hash", zap.Error(err))
-			return "", err
+
+		for _, f := range r.File {
+			if f.FileInfo().IsDir() {
+				continue
+			}
+
+			rc, err := f.Open()
+			if err != nil {
+				log.Error("Error opening internal file for hashing", zap.Error(err), zap.String("file", f.Name))
+				return "", err
+			}
+
+			if _, err := io.Copy(hash, rc); err != nil {
+				rc.Close()
+				log.Error("Error copying file content to hash", zap.Error(err), zap.String("file", f.Name))
+				return "", err
+			}
+			rc.Close()
 		}
-		// hash := sha256.Sum256([]byte(content))
+
 		return hex.EncodeToString(hash.Sum(nil)), nil
+
 	default:
 		return "", errors.New("Unsupported book type")
 	}

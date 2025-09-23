@@ -1,4 +1,4 @@
-package model //import "github.com/Xunop/e-oasis/model"
+package model //import "github.com/Xunop/e-oasis/internal/model"
 
 import (
 	"testing"

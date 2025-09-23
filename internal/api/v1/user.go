@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Xunop/e-oasis/http/request"
-	"github.com/Xunop/e-oasis/http/response"
-	"github.com/Xunop/e-oasis/log"
-	"github.com/Xunop/e-oasis/model"
-	"github.com/Xunop/e-oasis/validator"
+	"github.com/Xunop/e-oasis/internal/http/request"
+	"github.com/Xunop/e-oasis/internal/http/response"
+	"github.com/Xunop/e-oasis/internal/log"
+	"github.com/Xunop/e-oasis/internal/model"
+	"github.com/Xunop/e-oasis/internal/validator"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
