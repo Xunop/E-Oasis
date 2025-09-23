@@ -1,0 +1,10 @@
+services:
+  e-oasis:
+    build: .
+    container_name: e-oasis
+    # Restart the container automatically unless it is manually stopped
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/var/opt/e-oasis
