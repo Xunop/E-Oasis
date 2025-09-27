@@ -8,3 +8,4 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/var/opt/e-oasis
+      - ./data/config.toml:/app/config.toml

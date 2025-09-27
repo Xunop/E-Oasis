@@ -36,32 +36,88 @@ func (s *Store) GetBook(find *model.FindBook) (*model.Book, error) {
 	return book, nil
 }
 
-// TODO: RemoveBook need to remove link between user and book
-// RemoveBook remove book from the store
+// RemoveBook removes book records from the database AND its corresponding file from storage.
 func (s *Store) RemoveBook(find *model.FindBook) error {
-	if find.UserID != nil {
-		return s.RemoveBookByUserID(*find.UserID, *find.BookID)
+	// Find the book to get its path before deleting the record.
+	// We use ListBooks because it can handle all find criteria.
+	books, err := s.ListBooks(find)
+	if err != nil {
+		return errors.Wrap(err, "failed to find book for deletion")
 	}
-	stmt := `DELETE FROM books WHERE id = ?`
-	args := []any{find.BookID}
+	if len(books) == 0 {
+		log.Warn("Attempted to delete a book that does not exist or does not match criteria", zap.Any("find", find))
+		return nil // This is not an error, just nothing to do.
+	}
 
-	s.metaDbLock.Lock()
-	defer s.metaDbLock.Unlock()
-	tx, err := s.metaDb.Begin()
+	// Assuming we only delete the first book that matches the criteria.
+	bookToDelete := books[0]
+	bookID := bookToDelete.ID
+	bookPath := bookToDelete.Path
+
+	// Delete database records in a transaction.
+	// metaDb transaction
+	metaTx, err := s.metaDb.Begin()
 	if err != nil {
 		return err
 	}
+	defer metaTx.Rollback() // Rollback on error
 
-	log.Debug("SQL query and args:")
-	log.Fallback("Debug", fmt.Sprintf("query: %s\nargs: %s\n", stmt, args))
+	// The AFTER DELETE trigger on the 'books' table will handle cascading deletes
+	// for most linked data in metaDb. We just need to delete from the books table.
+	if _, err := metaTx.Exec("DELETE FROM books WHERE id = ?", bookID); err != nil {
+		return errors.Wrap(err, "failed to delete from books table")
+	}
 
-	if _, err := tx.Exec(stmt, args...); err != nil {
-		tx.Rollback()
+	// appDb transaction
+	appTx, err := s.appDb.Begin()
+	if err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
-		return err
+	defer appTx.Rollback()
+
+    // Delete all links to the book from the application database tables.
+	tablesToClean := []string{
+		"book_user_link",
+		"book_shelf_link",
+		"bookmark",
+		"duration_info",
+		"reading_status",
+		"book_hash_link",
 	}
+
+	for _, table := range tablesToClean {
+		stmt := fmt.Sprintf("DELETE FROM %s WHERE book_id = ?", table)
+		if _, err := appTx.Exec(stmt, bookID); err != nil {
+			return errors.Wrapf(err, "failed to delete from %s table", table)
+		}
+	}
+
+	// Commit transactions for both databases.
+	if err := metaTx.Commit(); err != nil {
+		return errors.Wrap(err, "failed to commit metaDb transaction")
+	}
+	if err := appTx.Commit(); err != nil {
+		// Note: At this point, metaDb is committed. If appDb fails to commit,
+		// the data will be in an inconsistent state. A more complex system might require
+		// a two-phase commit or compensation logic, but for now, we'll just return the error.
+		return errors.Wrap(err, "failed to commit appDb transaction")
+	}
+
+	// If database operations were successful, delete the physical file.
+	if bookPath != "" {
+		// The book file is stored in its own directory, so we remove the entire directory.
+		bookDir := filepath.Dir(bookPath)
+		log.Debug("Deleting book directory", zap.String("path", bookDir))
+		if err := os.RemoveAll(bookDir); err != nil {
+			// This is a critical error as it results in an orphaned file. It needs to be logged.
+			log.Error("CRITICAL: Failed to delete book directory after deleting DB record",
+				zap.String("path", bookDir),
+				zap.Error(err))
+			return errors.Wrap(err, "failed to delete book directory")
+		}
+	}
+
+	log.Info("Book deleted successfully", zap.Int("bookID", bookID))
 	return nil
 }
 
@@ -516,6 +572,8 @@ func (s *Store) UpsetBookStatus(status *model.BookReadingStatusLink) (*model.Boo
 		status.Status,
 	}
 
+	s.appDbLock.Lock()
+	defer s.appDbLock.Unlock()
 	tx, err := s.appDb.Begin()
 	if err != nil {
 		log.Error("Failed to begin transaction", zap.Error(err))
@@ -728,6 +786,8 @@ func (s *Store) ListBooksByTag(tagID int) ([]*model.Book, error) {
 // then creates the link between the book and the tag.
 // This is done in a transaction to ensure atomicity.
 func (s *Store) AddTagToBook(bookID int, tagName string) error {
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
 	tx, err := s.metaDb.Begin()
 	if err != nil {
 		return errors.Wrap(err, "failed to begin transaction")
@@ -801,6 +861,8 @@ func (s *Store) ParseAndSaveBookMeta(path string, userID int, tags []string) err
 		}(bookCover)
 	}
 
+	s.metaDbLock.Lock()
+	defer s.metaDbLock.Unlock()
 	// Begin a database transaction.
 	tx, err := s.metaDb.Begin()
 	if err != nil {

@@ -87,6 +87,7 @@ func checkDataDir(dataDir string) (string, error) {
 }
 
 func ParseFile(file string) (*Options, error) {
+	fmt.Println("Reading config file from", file)
 	// Check if file exists
 	if _, err := os.Stat(file); err != nil {
 		return nil, errors.Wrapf(err, "unable to access config file %s", file)
